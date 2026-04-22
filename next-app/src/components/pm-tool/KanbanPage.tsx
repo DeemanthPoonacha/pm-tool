@@ -1,3 +1,1 @@
-export function KanbanPage() {
-  return <div>Kanban Page</div>;
-}
+export function KanbanPage() { return <div>Kanban</div> }

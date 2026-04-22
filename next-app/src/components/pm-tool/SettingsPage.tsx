@@ -1,3 +1,1 @@
-export function SettingsPage() {
-  return <div>Settings Page</div>;
-}
+export function SettingsPage() { return <div>Settings</div> }

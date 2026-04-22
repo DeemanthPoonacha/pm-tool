@@ -1,12 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { cookies } from "next/headers";
-import { can, getUser, roleLabels, PERMISSIONS } from "@/lib/permissions";
 import { AppNav } from "@/components/layout/AppNav";
 import { AppSidebar } from "@/components/layout/AppSidebar";
-import { getProjectTeam } from "@/lib/projects";
-import { getProject } from "@/lib/projects";
-import { getNotifications } from "@/lib/changes";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,12 +27,6 @@ export default async function RootLayout({
   const cookieStore = await cookies();
   const sessionId = cookieStore.get("session_id")?.value;
   
-  let user = undefined;
-  if (sessionId) {
-    // For now, check if we have the session data in localStorage on client
-    user = undefined; // Will be handled by client-side auth
-  }
-
   return (
     <html
       lang="en"
@@ -44,6 +34,7 @@ export default async function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-zinc-50 dark:bg-zinc-950">
         <ScriptInjection />
+        {children}
       </body>
     </html>
   );

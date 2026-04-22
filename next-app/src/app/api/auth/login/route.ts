@@ -1,39 +1,23 @@
-import { cookies } from "next/headers";
-import { v4 as uuidv4 } from 'uuid';
-import { redirect } from "next/navigation";
+import { verifyLogin } from "@/lib/permissions";
 
 export async function POST(req: Request) {
   const formData = await req.formData();
   const email = formData.get('email') as string;
   const password = formData.get('password') as string;
   
-  const { verifyLogin } = await import('@/lib/permissions');
   const result = verifyLogin(email, password);
   
   if (!result.success) {
-    return Response.redirect(new URL('/login?error=invalid', req.url));
+    return new Response('Invalid credentials', { status: 401 });
   }
 
-  const sessionId = `s_${uuidv4()}`;
+  const sessionId = `s_${crypto.randomUUID()}`;
   
-  return Response.redirect(new URL('/dashboard', req.url), {
+  return new Response(null, {
+    status: 302,
     headers: {
       'Set-Cookie': `session_id=${sessionId}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${60 * 60 * 24 * 7}`,
+      'Location': '/dashboard',
     },
   });
-}
-
-export async function POST$Register(req: Request) {
-  const formData = await req.formData();
-  const fullName = formData.get('fullName') as string;
-  const email = formData.get('email') as string;
-  const password = formData.get('password') as string;
-  
-  const { createUser } = await import('@/lib/permissions');
-  const { hashPassword } = await import('@/lib/auth-utils');
-  const id = `u_${crypto.randomUUID().slice(0, 12)}`;
-  
-  createUser(id, fullName, email, hashPassword(password), 'developer');
-  
-  return Response.redirect(new URL('/login', req.url));
 }

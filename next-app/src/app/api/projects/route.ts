@@ -1,5 +1,6 @@
+import { createProject } from "@/lib/projects";
 import { v4 as uuidv4 } from 'uuid';
-import { createProject } from '@/lib/projects';
+import { redirect } from "next/navigation";
 
 export async function POST(req: Request) {
   const formData = await req.formData();
@@ -11,5 +12,5 @@ export async function POST(req: Request) {
   const id = `p_${uuidv4().slice(0, 12)}`;
   createProject(id, name, description, clientId, team);
   
-  return Response.redirect(new URL('/dashboard', req.url));
+  return redirect('/dashboard');
 }
