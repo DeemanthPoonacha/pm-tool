@@ -1,0 +1,3 @@
+export function KanbanPage() {
+  return <div>Kanban Page</div>;
+}
