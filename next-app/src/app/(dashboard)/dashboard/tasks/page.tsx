@@ -1,12 +1,13 @@
-import { getProjects } from '@/lib/projects';
-import { getTasks, getTaskComments } from '@/lib/tasks';
+'use client';
+
+import { useState, useEffect } from 'react';
 import { Header } from '@/components/dashboard/header';
+import { NewTaskButton } from '@/components/dashboard/new-task-button';
 import { 
   CheckSquare, 
   Clock, 
   MessageSquare, 
   AlertCircle,
-  Plus,
   Filter,
   Search,
   MoreVertical,
@@ -29,7 +30,43 @@ const priorityColors: Record<string, string> = {
 };
 
 export default function TasksPage() {
-  const projects = getProjects();
+  const [projects, setProjects] = useState<any[]>([]);
+  const [tasks, setTasks] = useState<any[]>([]);
+  const [developers, setDevelopers] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [projRes, taskRes, userRes] = await Promise.all([
+          fetch('/api/projects'),
+          fetch('/api/tasks'),
+          fetch('/api/users')
+        ]);
+        
+        const [projData, taskData, userData] = await Promise.all([
+          projRes.json(),
+          taskRes.json(),
+          userRes.json()
+        ]);
+        
+        setProjects(projData);
+        setTasks(taskData);
+        setDevelopers(userData.filter((u: any) => u.role === 'developer' || u.role === 'pm'));
+      } catch (e) {
+        console.error('Failed to fetch data:', e);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const filteredTasks = tasks.filter(t => 
+    t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    t.description?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <>
@@ -45,6 +82,8 @@ export default function TasksPage() {
                 <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
                 <input 
                   type="text" 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Filter tasks..." 
                   className="bg-zinc-900 border border-zinc-800 rounded-xl py-2 pl-10 pr-4 text-sm text-zinc-300 focus:ring-2 focus:ring-blue-600 outline-none w-64"
                 />
@@ -52,23 +91,26 @@ export default function TasksPage() {
              <button className="p-2 bg-zinc-900 text-zinc-400 border border-zinc-800 rounded-xl hover:text-white transition-colors">
                 <Filter className="w-5 h-5" />
              </button>
-             <button className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-blue-600/20">
-                + New Task
-             </button>
+             {!isLoading && <NewTaskButton projects={projects} developers={developers} />}
           </div>
         </div>
 
         <div className="space-y-8">
-          {projects.length === 0 ? (
+          {isLoading ? (
+            <div className="flex justify-center py-20">
+               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            </div>
+          ) : projects.length === 0 ? (
             <div className="bg-zinc-900/30 rounded-3xl border border-dashed border-zinc-800 p-20 text-center">
               <h3 className="text-xl font-bold text-white mb-2">No active projects</h3>
               <p className="text-zinc-500 mb-6">Create a project to start assigning tasks.</p>
-              <Link href="/dashboard/projects/new" className="text-blue-500 font-bold hover:underline">Go to Projects</Link>
+              <Link href="/dashboard/projects" className="text-blue-500 font-bold hover:underline">Go to Projects</Link>
             </div>
           ) : (
             projects.map(project => {
-              const tasks = getTasks(project.id);
-              if (tasks.length === 0) return null;
+              const projectTasks = filteredTasks.filter(t => t.project_id === project.id);
+              if (projectTasks.length === 0 && searchQuery) return null;
+              if (projectTasks.length === 0 && !searchQuery) return null;
 
               return (
                 <div key={project.id} className="space-y-4">
@@ -78,7 +120,7 @@ export default function TasksPage() {
                         {project.name.substring(0, 2).toUpperCase()}
                       </div>
                       <h3 className="font-bold text-white">{project.name}</h3>
-                      <span className="text-xs font-bold text-zinc-600 uppercase tracking-widest">{tasks.length}</span>
+                      <span className="text-xs font-bold text-zinc-600 uppercase tracking-widest">{projectTasks.length}</span>
                     </div>
                     <Link href={`/dashboard/projects/${project.id}?tab=tasks`} className="text-[10px] font-bold text-zinc-500 hover:text-white uppercase tracking-[0.2em] transition-colors">
                        Manage Project Tasks
@@ -86,10 +128,13 @@ export default function TasksPage() {
                   </div>
                   
                   <div className="bg-zinc-900/50 rounded-3xl border border-zinc-800/50 overflow-hidden premium-shadow divide-y divide-zinc-800/50">
-                    {tasks.map(task => {
-                      const comments = getTaskComments(task.id);
+                    {projectTasks.map(task => {
                       return (
-                        <div key={task.id} className="p-5 hover:bg-zinc-900/80 transition-all group flex items-center gap-6">
+                        <Link 
+                          key={task.id} 
+                          href={`/dashboard/tasks/${task.id}`}
+                          className="p-5 hover:bg-zinc-900/80 transition-all group flex items-center gap-6"
+                        >
                            <div className={cn(
                              "w-10 h-10 rounded-2xl flex items-center justify-center border transition-colors",
                              task.status === 'done' ? "bg-emerald-600/10 border-emerald-600/20 text-emerald-500" : "bg-zinc-800 border-zinc-700 text-zinc-500 group-hover:border-blue-600/30 group-hover:text-blue-500"
@@ -99,11 +144,11 @@ export default function TasksPage() {
                            
                            <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-3 mb-1">
-                                 <h4 className="font-bold text-white truncate">{task.title}</h4>
+                                 <h4 className="font-bold text-white truncate group-hover:text-blue-400 transition-colors">{task.title}</h4>
                                  <div className={cn(
                                    "w-1.5 h-1.5 rounded-full",
-                                   priorityColors[task.priority] === 'text-red-500' ? 'bg-red-500' :
-                                   priorityColors[task.priority] === 'text-amber-500' ? 'bg-amber-500' : 'bg-emerald-500'
+                                   task.priority === 'high' ? 'bg-red-500' :
+                                   task.priority === 'medium' ? 'bg-amber-500' : 'bg-emerald-500'
                                  )} />
                               </div>
                               <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-widest text-zinc-600">
@@ -117,10 +162,6 @@ export default function TasksPage() {
 
                            <div className="flex items-center gap-6">
                               <div className="flex items-center gap-4">
-                                 <div className="flex items-center gap-1.5 text-zinc-500 group-hover:text-zinc-400 transition-colors">
-                                    <MessageSquare className="w-4 h-4" />
-                                    <span className="text-xs font-bold">{comments.length}</span>
-                                 </div>
                                  <div className="w-8 h-8 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center text-[10px] font-bold text-zinc-500" title={task.assigned_name || 'Unassigned'}>
                                     {task.assigned_name ? task.assigned_name.substring(0, 1) : '?'}
                                  </div>
@@ -131,11 +172,11 @@ export default function TasksPage() {
                               )}>
                                  {task.status.replace('_', ' ')}
                               </div>
-                              <button className="p-2 text-zinc-700 hover:text-white transition-colors">
+                              <button className="p-2 text-zinc-700 hover:text-white transition-colors" onClick={(e) => { e.preventDefault(); }}>
                                  <MoreVertical className="w-5 h-5" />
                               </button>
                            </div>
-                        </div>
+                        </Link>
                       );
                     })}
                   </div>

@@ -1,6 +1,11 @@
-import { createProject } from "@/lib/projects";
+import { createProject, getProjects } from "@/lib/projects";
 import { v4 as uuidv4 } from 'uuid';
 import { NextResponse } from "next/server";
+
+export async function GET() {
+  const projects = getProjects();
+  return NextResponse.json(projects);
+}
 
 export async function POST(req: Request) {
   try {
@@ -16,7 +21,6 @@ export async function POST(req: Request) {
     
     return NextResponse.json({ id, message: "Project created successfully" });
   } catch (error) {
-    // Fallback for form data if needed, but primarily JSON now
     return NextResponse.json({ error: "Failed to create project" }, { status: 500 });
   }
 }

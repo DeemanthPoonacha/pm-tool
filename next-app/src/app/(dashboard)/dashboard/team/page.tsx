@@ -1,9 +1,9 @@
 import { getAllUsers } from '@/lib/permissions';
 import { Header } from '@/components/dashboard/header';
+import { InviteMemberButton } from '@/components/dashboard/invite-member-button';
 import { 
   Users2, 
   ShieldCheck, 
-  UserPlus, 
   Search, 
   Filter,
   MoreVertical,
@@ -49,10 +49,7 @@ export default function TeamPage() {
             <h2 className="text-2xl font-bold text-white tracking-tight">Organization Team</h2>
             <p className="text-zinc-500 mt-1">Manage user roles, permissions, and directory access.</p>
           </div>
-          <button className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-blue-600/20">
-            <UserPlus className="w-4 h-4" />
-            Invite Member
-          </button>
+          <InviteMemberButton />
         </div>
 
         {/* Role Stats */}

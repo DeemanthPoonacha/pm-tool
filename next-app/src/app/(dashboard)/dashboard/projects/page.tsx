@@ -2,7 +2,9 @@ import { getProjects, getProjectTeam } from '@/lib/projects';
 import { getTasks } from '@/lib/tasks';
 import { getRequirements, getProjectDocuments } from '@/lib/requirement';
 import { getChangeRequests } from '@/lib/changes';
+import { getAllUsers } from '@/lib/permissions';
 import { Header } from '@/components/dashboard/header';
+import { NewProjectButton } from '@/components/dashboard/new-project-button';
 import { 
   FolderKanban, 
   Users2, 
@@ -10,7 +12,6 @@ import {
   FileText, 
   FileEdit, 
   Files,
-  Plus,
   ArrowUpRight,
   MoreVertical
 } from 'lucide-react';
@@ -25,6 +26,8 @@ const taskProgress = (tasks: any[]) => {
 
 export default function ProjectsPage() {
   const projects = getProjects();
+  const users = getAllUsers();
+  const clients = users.filter(u => u.role === 'client');
 
   return (
     <>
@@ -35,13 +38,7 @@ export default function ProjectsPage() {
             <h2 className="text-2xl font-bold text-white tracking-tight">All Projects</h2>
             <p className="text-zinc-500 mt-1">Manage and track your active initiatives.</p>
           </div>
-          <Link 
-            href="/dashboard/projects/new" 
-            className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-blue-600/20 active:scale-95"
-          >
-            <Plus className="w-4 h-4" />
-            New Project
-          </Link>
+          <NewProjectButton clients={clients} />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -52,12 +49,9 @@ export default function ProjectsPage() {
               </div>
               <h3 className="text-xl font-bold text-white mb-2">No projects found</h3>
               <p className="text-zinc-500 max-w-xs mx-auto mb-8">Ready to start something new? Create your first project to begin tracking progress.</p>
-              <Link 
-                href="/dashboard/projects/new" 
-                className="text-blue-500 font-bold hover:underline flex items-center justify-center gap-2"
-              >
-                Create a project <ArrowUpRight className="w-4 h-4" />
-              </Link>
+              <div className="flex justify-center">
+                 <NewProjectButton clients={clients} />
+              </div>
             </div>
           ) : (
             projects.map(project => {

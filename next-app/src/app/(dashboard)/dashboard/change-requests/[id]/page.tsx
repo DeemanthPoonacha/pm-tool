@@ -1,4 +1,6 @@
-import { use } from 'react';
+'use client';
+
+import { use, useState } from 'react';
 import { getChangeRequest, getChangeRequestTasks } from '@/lib/changes';
 import { getProject } from '@/lib/projects';
 import { Header } from '@/components/dashboard/header';
@@ -16,10 +18,12 @@ import {
   ShieldX,
   MoreVertical,
   ShieldAlert,
-  ClipboardList
+  ClipboardList,
+  CheckSquare
 } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import { useRouter } from 'next/navigation';
 
 const statusColors: Record<string, string> = {
   pending: 'bg-amber-600/10 text-amber-500 border-amber-600/20',
@@ -29,6 +33,9 @@ const statusColors: Record<string, string> = {
 
 export default function ChangeRequestDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
+  
   const cr = getChangeRequest(id);
   
   if (!cr) {
@@ -43,6 +50,28 @@ export default function ChangeRequestDetailsPage({ params }: { params: Promise<{
 
   const project = getProject(cr.project_id) as any;
   const linkedTasks = getChangeRequestTasks(id);
+
+  const handleAction = async (action: 'approve' | 'reject') => {
+    setIsLoading(true);
+    try {
+      await fetch('/api/change-requests', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          id: cr.id, 
+          action, 
+          userId: 'u_admin', 
+          impact: action === 'approve' ? 'Medium' : null,
+          rejectionReason: action === 'reject' ? 'Not feasible within current timeline' : null
+        }),
+      });
+      router.refresh();
+    } catch (error) {
+      console.error(`Failed to ${action} CR:`, error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <>
@@ -196,11 +225,19 @@ export default function ChangeRequestDetailsPage({ params }: { params: Promise<{
                    <div className="grid grid-cols-1 gap-2">
                       {cr.status === 'pending' ? (
                         <>
-                           <button className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-blue-600/20 flex items-center justify-center gap-2">
+                           <button 
+                             disabled={isLoading}
+                             onClick={() => handleAction('approve')}
+                             className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-blue-600/20 flex items-center justify-center gap-2 disabled:opacity-50"
+                           >
                               <ShieldCheck className="w-4 h-4" />
                               Approve Change
                            </button>
-                           <button className="w-full py-3 bg-red-600/10 hover:bg-red-600/20 text-red-500 border border-red-600/20 text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2">
+                           <button 
+                             disabled={isLoading}
+                             onClick={() => handleAction('reject')}
+                             className="w-full py-3 bg-red-600/10 hover:bg-red-600/20 text-red-500 border border-red-600/20 text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                           >
                               <ShieldX className="w-4 h-4" />
                               Reject Change
                            </button>

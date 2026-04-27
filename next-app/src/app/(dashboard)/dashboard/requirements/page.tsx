@@ -1,12 +1,13 @@
 import { getProjects } from '@/lib/projects';
 import { getRequirements, getRequirementVersions } from '@/lib/requirement';
 import { Header } from '@/components/dashboard/header';
+import { NewRequirementButton } from '@/components/dashboard/new-requirement-button';
+import { RequirementActions } from '@/components/dashboard/requirement-actions';
 import { 
   FileText, 
   History, 
   CheckCircle2, 
   AlertCircle,
-  Plus,
   ArrowUpRight,
   ChevronRight,
   MoreVertical,
@@ -34,10 +35,7 @@ export default function RequirementsPage() {
             <h2 className="text-2xl font-bold text-white tracking-tight">Requirement Management</h2>
             <p className="text-zinc-500 mt-1">Formal documentation and approval workflows for BRDs and FRDs.</p>
           </div>
-          <button className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-blue-600/20">
-            <Plus className="w-4 h-4" />
-            New Requirement
-          </button>
+          <NewRequirementButton projects={projects} />
         </div>
 
         <div className="space-y-12">
@@ -45,7 +43,7 @@ export default function RequirementsPage() {
             <div className="bg-zinc-900/30 rounded-3xl border border-dashed border-zinc-800 p-20 text-center">
               <h3 className="text-xl font-bold text-white mb-2">No active projects</h3>
               <p className="text-zinc-500 mb-6">Create a project to start managing requirements.</p>
-              <Link href="/dashboard/projects/new" className="text-blue-500 font-bold hover:underline">Go to Projects</Link>
+              <Link href="/dashboard/projects" className="text-blue-500 font-bold hover:underline">Go to Projects</Link>
             </div>
           ) : (
             projects.map(project => {
@@ -70,7 +68,7 @@ export default function RequirementsPage() {
                       return (
                         <div key={req.id} className="bg-zinc-900/50 rounded-3xl border border-zinc-800/50 p-6 hover:border-blue-600/30 transition-all group premium-shadow flex flex-col">
                            <div className="flex justify-between items-start mb-4">
-                              <div className="flex items-center gap-3">
+                              <Link href={`/dashboard/requirements/${req.id}`} className="flex items-center gap-3">
                                  <div className="w-10 h-10 bg-blue-600/10 rounded-xl flex items-center justify-center text-blue-500 border border-blue-600/20">
                                     <FileText className="w-5 h-5" />
                                  </div>
@@ -83,15 +81,22 @@ export default function RequirementsPage() {
                                        <span className="text-[10px] font-bold text-zinc-600">v{req.version}</span>
                                     </div>
                                  </div>
+                              </Link>
+                              <div className="flex items-center gap-1">
+                                 {req.status === 'review' && (
+                                   <RequirementActions requirementId={req.id} />
+                                 )}
+                                 <button className="p-2 text-zinc-700 hover:text-white transition-colors">
+                                    <MoreVertical className="w-5 h-5" />
+                                 </button>
                               </div>
-                              <button className="p-2 text-zinc-700 hover:text-white transition-colors">
-                                 <MoreVertical className="w-5 h-5" />
-                              </button>
                            </div>
                            
-                           <p className="text-sm text-zinc-500 line-clamp-2 mb-6 flex-1">
-                              {req.content || 'No content preview available for this requirement.'}
-                           </p>
+                           <Link href={`/dashboard/requirements/${req.id}`} className="block flex-1 mb-6">
+                              <p className="text-sm text-zinc-500 line-clamp-2">
+                                 {req.content || 'No content preview available for this requirement.'}
+                              </p>
+                           </Link>
                            
                            <div className="flex items-center justify-between pt-4 border-t border-zinc-800/50">
                               <div className="flex items-center gap-4">

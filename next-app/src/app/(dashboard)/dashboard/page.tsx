@@ -1,7 +1,9 @@
 import { getProjects } from '@/lib/projects';
 import { getTasks } from '@/lib/tasks';
 import { getChangeRequests, getAuditLogs } from '@/lib/changes';
+import { getAllUsers } from '@/lib/permissions';
 import { Header } from '@/components/dashboard/header';
+import { NewProjectButton } from '@/components/dashboard/new-project-button';
 import { 
   FolderKanban, 
   CheckSquare, 
@@ -18,6 +20,8 @@ import { cn } from '@/lib/utils';
 export default function DashboardOverview() {
   const projects = getProjects();
   const auditLogs = getAuditLogs() as any[];
+  const users = getAllUsers();
+  const clients = users.filter(u => u.role === 'client');
   
   // Aggregate stats
   const totalProjects = projects.length;
@@ -48,9 +52,7 @@ export default function DashboardOverview() {
             <p className="text-zinc-500 mt-1">Here's what's happening with your projects today.</p>
           </div>
           <div className="flex items-center gap-3">
-             <Link href="/dashboard/projects/new" className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-blue-600/20 active:scale-95">
-                + New Project
-             </Link>
+             <NewProjectButton clients={clients} />
           </div>
         </div>
 
@@ -88,7 +90,9 @@ export default function DashboardOverview() {
               {projects.length === 0 ? (
                 <div className="bg-zinc-900/30 p-12 rounded-3xl border border-dashed border-zinc-800 text-center">
                    <p className="text-zinc-500 font-medium">No active projects to monitor.</p>
-                   <Link href="/dashboard/projects/new" className="text-blue-500 text-sm mt-2 inline-block font-bold hover:underline">Start your first project</Link>
+                   <div className="mt-4">
+                      <NewProjectButton clients={clients} />
+                   </div>
                 </div>
               ) : (
                 projects.slice(0, 4).map(project => {
@@ -167,9 +171,9 @@ export default function DashboardOverview() {
                 )}
               </div>
               {auditLogs.length > 0 && (
-                <button className="w-full py-4 bg-zinc-900/50 hover:bg-zinc-900 text-[10px] font-bold text-zinc-500 hover:text-zinc-300 uppercase tracking-[0.2em] transition-all border-t border-zinc-800/50">
-                   View Audit History
-                </button>
+                <Link href="/dashboard/notifications" className="block w-full py-4 bg-zinc-900/50 hover:bg-zinc-900 text-[10px] font-bold text-zinc-500 hover:text-zinc-300 uppercase tracking-[0.2em] transition-all border-t border-zinc-800/50 text-center">
+                   View Full Activity Log
+                </Link>
               )}
             </div>
           </div>

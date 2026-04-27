@@ -1,4 +1,6 @@
-import { use } from 'react';
+'use client';
+
+import { use, useState } from 'react';
 import { getTask, getTaskComments } from '@/lib/tasks';
 import { getProject } from '@/lib/projects';
 import { Header } from '@/components/dashboard/header';
@@ -18,6 +20,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import { useRouter } from 'next/navigation';
 
 const statusColors: Record<string, string> = {
   todo: 'bg-zinc-800 text-zinc-400 border-zinc-700',
@@ -34,6 +37,10 @@ const priorityColors: Record<string, string> = {
 
 export default function TaskDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
+  const [commentContent, setCommentContent] = useState('');
+  
   const task = getTask(id);
   
   if (!task) {
@@ -48,6 +55,44 @@ export default function TaskDetailsPage({ params }: { params: Promise<{ id: stri
 
   const project = getProject(task.project_id) as any;
   const comments = getTaskComments(id);
+
+  const handleUpdateStatus = async (status: string) => {
+    setIsLoading(true);
+    try {
+      await fetch('/api/tasks', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: task.id, status }),
+      });
+      router.refresh();
+    } catch (error) {
+      console.error('Failed to update task status:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handlePostComment = async () => {
+    if (!commentContent.trim()) return;
+    setIsLoading(true);
+    try {
+      await fetch('/api/tasks/comments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          taskId: task.id, 
+          userId: 'u_admin', // Mocking as admin
+          content: commentContent 
+        }),
+      });
+      setCommentContent('');
+      router.refresh();
+    } catch (error) {
+      console.error('Failed to post comment:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <>
@@ -120,7 +165,7 @@ export default function TaskDetailsPage({ params }: { params: Promise<{ id: stri
                                </div>
                                <div className="bg-zinc-950/50 p-4 rounded-2xl border border-zinc-800/50 text-sm text-zinc-300">
                                   {comment.content}
-                               </div>
+                                </div>
                             </div>
                          </div>
                        ))}
@@ -130,10 +175,16 @@ export default function TaskDetailsPage({ params }: { params: Promise<{ id: stri
                   <div className="pt-6 border-t border-zinc-800/50">
                      <div className="relative">
                         <textarea 
+                           value={commentContent}
+                           onChange={(e) => setCommentContent(e.target.value)}
                            placeholder="Type your message..." 
                            className="w-full bg-zinc-950 border border-zinc-800 rounded-2xl p-4 pr-16 text-sm text-zinc-300 focus:ring-2 focus:ring-blue-600 outline-none min-h-[100px] transition-all"
                         />
-                        <button className="absolute bottom-4 right-4 p-2 bg-blue-600 text-white rounded-xl hover:bg-blue-500 transition-all shadow-lg shadow-blue-600/20">
+                        <button 
+                          disabled={isLoading || !commentContent.trim()}
+                          onClick={handlePostComment}
+                          className="absolute bottom-4 right-4 p-2 bg-blue-600 text-white rounded-xl hover:bg-blue-500 transition-all shadow-lg shadow-blue-600/20 disabled:opacity-50"
+                        >
                            <Send className="w-5 h-5" />
                         </button>
                      </div>
@@ -171,13 +222,25 @@ export default function TaskDetailsPage({ params }: { params: Promise<{ id: stri
                 <div className="pt-6 border-t border-zinc-800/50 space-y-4">
                    <h4 className="text-[10px] font-bold text-zinc-600 uppercase tracking-[0.2em]">Quick Actions</h4>
                    <div className="grid grid-cols-1 gap-2">
-                      <button className="w-full py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold rounded-xl transition-all border border-zinc-700">
-                         Move to Next Stage
+                      <button 
+                        disabled={isLoading}
+                        onClick={() => handleUpdateStatus('in_progress')}
+                        className="w-full py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold rounded-xl transition-all border border-zinc-700 disabled:opacity-50"
+                      >
+                         Mark In Progress
                       </button>
-                      <button className="w-full py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold rounded-xl transition-all border border-zinc-700">
+                      <button 
+                        disabled={isLoading}
+                        onClick={() => handleUpdateStatus('blocked')}
+                        className="w-full py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold rounded-xl transition-all border border-zinc-700 disabled:opacity-50"
+                      >
                          Mark as Blocked
                       </button>
-                      <button className="w-full py-2.5 bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-500 text-xs font-bold rounded-xl transition-all border border-emerald-600/20">
+                      <button 
+                        disabled={isLoading}
+                        onClick={() => handleUpdateStatus('done')}
+                        className="w-full py-2.5 bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-500 text-xs font-bold rounded-xl transition-all border border-emerald-600/20 disabled:opacity-50"
+                      >
                          Complete Task
                       </button>
                    </div>
