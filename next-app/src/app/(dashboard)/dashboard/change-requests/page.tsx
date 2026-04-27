@@ -1,10 +1,26 @@
 import { getProjects } from '@/lib/projects';
 import { getChangeRequests } from '@/lib/changes';
 import { Header } from '@/components/dashboard/header';
-import { GitPullRequest, Clock } from 'lucide-react';
-import { NewCRButton } from '@/components/dashboard/new-cr-button';
-import { CRActions } from '@/components/dashboard/cr-actions';
+import { 
+  FileEdit, 
+  AlertCircle, 
+  CheckCircle2, 
+  XCircle,
+  Plus,
+  ArrowUpRight,
+  ChevronRight,
+  MoreVertical,
+  Activity,
+  Zap
+} from 'lucide-react';
+import Link from 'next/link';
 import { cn } from '@/lib/utils';
+
+const statusColors: Record<string, string> = {
+  pending: 'bg-amber-600/10 text-amber-500 border-amber-600/20',
+  approved: 'bg-emerald-600/10 text-emerald-500 border-emerald-600/20',
+  rejected: 'bg-red-600/10 text-red-500 border-red-600/20',
+};
 
 export default function ChangeRequestsPage() {
   const projects = getProjects();
@@ -12,74 +28,96 @@ export default function ChangeRequestsPage() {
   return (
     <>
       <Header title="Change Requests" />
-      <main className="p-8">
-        <div className="flex justify-between items-center mb-8">
+      <main className="p-8 max-w-7xl mx-auto w-full space-y-8">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Change Requests</h1>
-            <p className="text-zinc-500 text-sm mt-1">Track and approve modifications to project scope</p>
+            <h2 className="text-2xl font-bold text-white tracking-tight">Change Control</h2>
+            <p className="text-zinc-500 mt-1">Review and manage project scope changes and bug reports.</p>
           </div>
-          <NewCRButton projects={projects} />
+          <button className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-blue-600/20">
+            <Plus className="w-4 h-4" />
+            New Change Request
+          </button>
         </div>
 
-        <div className="space-y-8">
+        <div className="space-y-12">
           {projects.length === 0 ? (
-            <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-16 text-center">
-              <p className="text-zinc-500">No projects yet.</p>
+            <div className="bg-zinc-900/30 rounded-3xl border border-dashed border-zinc-800 p-20 text-center">
+              <h3 className="text-xl font-bold text-white mb-2">No active projects</h3>
+              <p className="text-zinc-500 mb-6">Create a project to start managing change requests.</p>
+              <Link href="/dashboard/projects/new" className="text-blue-500 font-bold hover:underline">Go to Projects</Link>
             </div>
           ) : (
-            projects.map((project) => {
+            projects.map(project => {
               const crs = getChangeRequests(project.id);
+              if (crs.length === 0) return null;
+
+              const pending = crs.filter(cr => cr.status === 'pending').length;
+              
               return (
-                <div key={project.id} className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-sm transition-all hover:shadow-md">
-                  <div className="px-6 py-4 bg-zinc-50 dark:bg-zinc-800/50 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center">
-                    <h3 className="font-semibold text-zinc-900 dark:text-white flex items-center gap-2">
-                      <GitPullRequest className="w-4 h-4 text-purple-500" />
-                      {project.name}
-                    </h3>
-                    <span className="text-xs text-zinc-500 font-medium">
-                      {crs.length} Requests
-                    </span>
+                <div key={project.id} className="space-y-4">
+                  <div className="flex items-center justify-between px-2">
+                    <div className="flex items-center gap-3">
+                      <h3 className="font-bold text-white text-lg">{project.name}</h3>
+                      {pending > 0 && (
+                        <span className="bg-amber-600/10 text-amber-500 text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-lg border border-amber-600/20 animate-pulse">
+                          {pending} Action Required
+                        </span>
+                      )}
+                    </div>
+                    <Link href={`/dashboard/projects/${project.id}?tab=changes`} className="text-[10px] font-bold text-zinc-500 hover:text-white uppercase tracking-widest flex items-center gap-1">
+                       Full History <ChevronRight className="w-3 h-3" />
+                    </Link>
                   </div>
-                  <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                    {crs.length === 0 ? (
-                      <div className="p-8 text-center text-zinc-500 text-sm italic">
-                        No active change requests for this project.
-                      </div>
-                    ) : (
-                      crs.map((cr) => (
-                        <div key={cr.id} className="p-6 hover:bg-zinc-50 dark:hover:bg-zinc-800/30 transition-colors flex items-center justify-between gap-6">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-3">
-                              <p className="text-sm font-semibold text-zinc-900 dark:text-white truncate">
-                                {cr.title}
-                              </p>
-                              <span className={cn(
-                                "text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider",
-                                cr.status === 'approved' ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" :
-                                cr.status === 'rejected' ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" :
-                                "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
-                              )}>
-                                {cr.status}
-                              </span>
+                  
+                  <div className="grid grid-cols-1 gap-4">
+                    {crs.map(cr => (
+                      <div key={cr.id} className="bg-zinc-900/50 rounded-3xl border border-zinc-800/50 p-6 hover:border-blue-600/30 transition-all group flex items-center gap-8">
+                         <div className={cn(
+                           "w-12 h-12 rounded-2xl flex items-center justify-center border transition-all shadow-lg",
+                           cr.status === 'pending' ? 'bg-amber-600/10 text-amber-500 border-amber-600/20 shadow-amber-600/5' :
+                           cr.status === 'approved' ? 'bg-emerald-600/10 text-emerald-500 border-emerald-600/20 shadow-emerald-600/5' :
+                           'bg-red-600/10 text-red-500 border-red-600/20 shadow-red-600/5'
+                         )}>
+                            <FileEdit className="w-6 h-6" />
+                         </div>
+                         
+                         <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-3 mb-1">
+                               <h4 className="font-bold text-white truncate text-base">{cr.title}</h4>
+                               <span className={cn("px-2 py-0.5 rounded-lg text-[9px] font-bold uppercase tracking-widest border", statusColors[cr.status])}>
+                                  {cr.status}
+                               </span>
                             </div>
-                            <div className="flex items-center gap-4 mt-2">
-                              <span className="text-xs text-zinc-500 flex items-center gap-1">
-                                <Clock className="w-3 h-3" />
-                                Requested by <span className="font-medium text-zinc-700 dark:text-zinc-300">{cr.requested_by_name || 'Unknown'}</span>
-                              </span>
+                            <p className="text-sm text-zinc-500 line-clamp-1 mb-2">
+                               {cr.description || 'No detailed description.'}
+                            </p>
+                            <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-widest text-zinc-600">
+                               <span className="flex items-center gap-1.5"><Zap className="w-3 h-3" /> Impact: {cr.impact || 'Medium'}</span>
+                               <span className="w-1 h-1 bg-zinc-800 rounded-full" />
+                               <span>By {cr.requested_by_name || 'Client'}</span>
+                               <span className="w-1 h-1 bg-zinc-800 rounded-full" />
+                               <span>{new Date(cr.created_at).toLocaleDateString()}</span>
                             </div>
-                          </div>
-                          <div className="flex items-center gap-2">
+                         </div>
+                         
+                         <div className="flex items-center gap-4">
                             {cr.status === 'pending' && (
-                              <CRActions crId={cr.id} />
+                              <div className="flex items-center gap-2">
+                                 <button className="px-3 py-1.5 bg-emerald-600/10 text-emerald-500 border border-emerald-600/20 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-emerald-600 hover:text-white transition-all">
+                                    Approve
+                                 </button>
+                                 <button className="px-3 py-1.5 bg-red-600/10 text-red-500 border border-red-600/20 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-red-600 hover:text-white transition-all">
+                                    Reject
+                                 </button>
+                              </div>
                             )}
-                            <button className="px-3 py-1.5 text-xs font-medium text-purple-600 hover:bg-purple-50 dark:text-purple-400 dark:hover:bg-purple-900/20 rounded-lg transition-all border border-purple-200 dark:border-purple-800">
-                              Details
+                            <button className="p-2 text-zinc-700 hover:text-white transition-colors">
+                               <MoreVertical className="w-5 h-5" />
                             </button>
-                          </div>
-                        </div>
-                      ))
-                    )}
+                         </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               );

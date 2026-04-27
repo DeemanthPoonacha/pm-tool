@@ -1,10 +1,26 @@
 import { getProjects } from '@/lib/projects';
-import { getRequirements } from '@/lib/requirement';
+import { getRequirements, getRequirementVersions } from '@/lib/requirement';
 import { Header } from '@/components/dashboard/header';
-import { FileText, Clock } from 'lucide-react';
-import { NewRequirementButton } from '@/components/dashboard/new-requirement-button';
-import { RequirementActions } from '@/components/dashboard/requirement-actions';
+import { 
+  FileText, 
+  History, 
+  CheckCircle2, 
+  AlertCircle,
+  Plus,
+  ArrowUpRight,
+  ChevronRight,
+  MoreVertical,
+  Layers
+} from 'lucide-react';
+import Link from 'next/link';
 import { cn } from '@/lib/utils';
+
+const statusColors: Record<string, string> = {
+  draft: 'bg-zinc-800 text-zinc-500 border-zinc-700',
+  review: 'bg-amber-600/10 text-amber-500 border-amber-600/20',
+  approved: 'bg-emerald-600/10 text-emerald-500 border-emerald-600/20',
+  rejected: 'bg-red-600/10 text-red-500 border-red-600/20',
+};
 
 export default function RequirementsPage() {
   const projects = getProjects();
@@ -12,77 +28,95 @@ export default function RequirementsPage() {
   return (
     <>
       <Header title="Requirements" />
-      <main className="p-8">
-        <div className="flex justify-between items-center mb-8">
+      <main className="p-8 max-w-7xl mx-auto w-full space-y-8">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Requirements</h1>
-            <p className="text-zinc-500 text-sm mt-1">Manage project requirements and sign-offs</p>
+            <h2 className="text-2xl font-bold text-white tracking-tight">Requirement Management</h2>
+            <p className="text-zinc-500 mt-1">Formal documentation and approval workflows for BRDs and FRDs.</p>
           </div>
-          <NewRequirementButton projects={projects} />
+          <button className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-blue-600/20">
+            <Plus className="w-4 h-4" />
+            New Requirement
+          </button>
         </div>
 
-        <div className="space-y-8">
+        <div className="space-y-12">
           {projects.length === 0 ? (
-            <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-16 text-center shadow-sm">
-              <p className="text-zinc-500">No projects yet.</p>
+            <div className="bg-zinc-900/30 rounded-3xl border border-dashed border-zinc-800 p-20 text-center">
+              <h3 className="text-xl font-bold text-white mb-2">No active projects</h3>
+              <p className="text-zinc-500 mb-6">Create a project to start managing requirements.</p>
+              <Link href="/dashboard/projects/new" className="text-blue-500 font-bold hover:underline">Go to Projects</Link>
             </div>
           ) : (
-            projects.map((project) => {
+            projects.map(project => {
               const requirements = getRequirements(project.id);
+              if (requirements.length === 0) return null;
+
               return (
-                <div key={project.id} className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-sm transition-all hover:shadow-md">
-                  <div className="px-6 py-4 bg-zinc-50 dark:bg-zinc-800/50 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center">
-                    <h3 className="font-semibold text-zinc-900 dark:text-white flex items-center gap-2">
-                      <FileText className="w-4 h-4 text-blue-500" />
-                      {project.name}
-                    </h3>
-                    <span className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 px-2 py-0.5 rounded-full font-medium">
-                      {requirements.length} Documents
-                    </span>
+                <div key={project.id} className="space-y-4">
+                  <div className="flex items-center justify-between px-2">
+                    <div className="flex items-center gap-3">
+                      <h3 className="font-bold text-white text-lg">{project.name}</h3>
+                      <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-[0.2em]">{requirements.length} Documents</span>
+                    </div>
+                    <Link href={`/dashboard/projects/${project.id}?tab=requirements`} className="text-[10px] font-bold text-zinc-500 hover:text-white uppercase tracking-widest flex items-center gap-1">
+                       Project Workspace <ChevronRight className="w-3 h-3" />
+                    </Link>
                   </div>
-                  <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                    {requirements.length === 0 ? (
-                      <div className="p-8 text-center text-zinc-500 text-sm italic">
-                        No requirements documents found for this project.
-                      </div>
-                    ) : (
-                      requirements.map((req) => (
-                        <div key={req.id} className="p-6 hover:bg-zinc-50 dark:hover:bg-zinc-800/30 transition-colors flex items-center justify-between gap-6">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-3">
-                              <p className="text-sm font-semibold text-zinc-900 dark:text-white truncate">
-                                {req.title}
-                              </p>
-                              <span className={cn(
-                                "text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider",
-                                req.status === 'approved' ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" :
-                                req.status === 'rejected' ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" :
-                                "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
-                              )}>
-                                {req.status}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-4 mt-2">
-                              <span className="text-xs text-zinc-500 flex items-center gap-1">
-                                <Clock className="w-3 h-3" />
-                                Version {req.version}
-                              </span>
-                              <span className="text-xs text-zinc-500">
-                                Created by <span className="font-medium text-zinc-700 dark:text-zinc-300">{req.created_by_name || 'Unknown'}</span>
-                              </span>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {req.status === 'draft' && (
-                              <RequirementActions requirementId={req.id} />
-                            )}
-                            <button className="px-3 py-1.5 text-xs font-medium text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20 rounded-lg transition-all border border-blue-200 dark:border-blue-800">
-                              View Details
-                            </button>
-                          </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {requirements.map(req => {
+                      const versions = getRequirementVersions(req.id);
+                      return (
+                        <div key={req.id} className="bg-zinc-900/50 rounded-3xl border border-zinc-800/50 p-6 hover:border-blue-600/30 transition-all group premium-shadow flex flex-col">
+                           <div className="flex justify-between items-start mb-4">
+                              <div className="flex items-center gap-3">
+                                 <div className="w-10 h-10 bg-blue-600/10 rounded-xl flex items-center justify-center text-blue-500 border border-blue-600/20">
+                                    <FileText className="w-5 h-5" />
+                                 </div>
+                                 <div>
+                                    <h4 className="font-bold text-white group-hover:text-blue-400 transition-colors">{req.title}</h4>
+                                    <div className="flex items-center gap-2 mt-1">
+                                       <span className={cn("px-2 py-0.5 rounded-lg text-[9px] font-bold uppercase tracking-widest border", statusColors[req.status])}>
+                                          {req.status}
+                                       </span>
+                                       <span className="text-[10px] font-bold text-zinc-600">v{req.version}</span>
+                                    </div>
+                                 </div>
+                              </div>
+                              <button className="p-2 text-zinc-700 hover:text-white transition-colors">
+                                 <MoreVertical className="w-5 h-5" />
+                              </button>
+                           </div>
+                           
+                           <p className="text-sm text-zinc-500 line-clamp-2 mb-6 flex-1">
+                              {req.content || 'No content preview available for this requirement.'}
+                           </p>
+                           
+                           <div className="flex items-center justify-between pt-4 border-t border-zinc-800/50">
+                              <div className="flex items-center gap-4">
+                                 <div className="flex items-center gap-1.5 text-zinc-600" title="Version History">
+                                    <History className="w-3.5 h-3.5" />
+                                    <span className="text-[10px] font-bold">{versions.length}</span>
+                                 </div>
+                                 <div className="flex items-center gap-1.5 text-zinc-600">
+                                    <Layers className="w-3.5 h-3.5" />
+                                    <span className="text-[10px] font-bold">FRD</span>
+                                 </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                 <div className="text-right">
+                                    <p className="text-[10px] font-bold text-zinc-400 leading-none">{req.created_by_name || 'System'}</p>
+                                    <p className="text-[9px] font-bold text-zinc-600 uppercase tracking-tighter mt-1">{new Date(req.created_at).toLocaleDateString()}</p>
+                                 </div>
+                                 <div className="w-8 h-8 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center text-[10px] font-bold text-zinc-500">
+                                    {(req.created_by_name || 'S').substring(0, 1)}
+                                 </div>
+                              </div>
+                           </div>
                         </div>
-                      ))
-                    )}
+                      );
+                    })}
                   </div>
                 </div>
               );

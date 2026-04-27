@@ -1,94 +1,143 @@
 import { getProjects } from '@/lib/projects';
-import { getTasks } from '@/lib/tasks';
-import { getUsers } from '@/lib/users';
+import { getTasks, getTaskComments } from '@/lib/tasks';
 import { Header } from '@/components/dashboard/header';
-import { CheckCircle2, Circle, Clock } from 'lucide-react';
-import { NewTaskButton } from '@/components/dashboard/new-task-button';
+import { 
+  CheckSquare, 
+  Clock, 
+  MessageSquare, 
+  AlertCircle,
+  Plus,
+  Filter,
+  Search,
+  MoreVertical,
+  ChevronRight
+} from 'lucide-react';
+import Link from 'next/link';
 import { cn } from '@/lib/utils';
+
+const statusColors: Record<string, string> = {
+  todo: 'bg-zinc-800 text-zinc-400 border-zinc-700',
+  in_progress: 'bg-blue-600/10 text-blue-500 border-blue-600/20',
+  done: 'bg-emerald-600/10 text-emerald-500 border-emerald-600/20',
+  blocked: 'bg-red-600/10 text-red-500 border-red-600/20',
+};
+
+const priorityColors: Record<string, string> = {
+  high: 'text-red-500',
+  medium: 'text-amber-500',
+  low: 'text-emerald-500',
+};
 
 export default function TasksPage() {
   const projects = getProjects();
-  const developers = getUsers('developer');
 
   return (
     <>
       <Header title="Tasks" />
-      <main className="p-8">
-        <div className="flex justify-between items-center mb-8">
+      <main className="p-8 max-w-7xl mx-auto w-full space-y-8">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Task Management</h1>
-            <p className="text-zinc-500 text-sm mt-1">Monitor and assign tasks across projects</p>
+            <h2 className="text-2xl font-bold text-white tracking-tight">Work Management</h2>
+            <p className="text-zinc-500 mt-1">Track and manage all tasks across your projects.</p>
           </div>
-          <NewTaskButton projects={projects} developers={developers} />
+          <div className="flex items-center gap-3">
+             <div className="relative hidden sm:block">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
+                <input 
+                  type="text" 
+                  placeholder="Filter tasks..." 
+                  className="bg-zinc-900 border border-zinc-800 rounded-xl py-2 pl-10 pr-4 text-sm text-zinc-300 focus:ring-2 focus:ring-blue-600 outline-none w-64"
+                />
+             </div>
+             <button className="p-2 bg-zinc-900 text-zinc-400 border border-zinc-800 rounded-xl hover:text-white transition-colors">
+                <Filter className="w-5 h-5" />
+             </button>
+             <button className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-blue-600/20">
+                + New Task
+             </button>
+          </div>
         </div>
 
-        <div className="space-y-6">
+        <div className="space-y-8">
           {projects.length === 0 ? (
-            <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-16 text-center shadow-sm">
-              <p className="text-zinc-500">No projects yet. Create a project to start managing tasks.</p>
+            <div className="bg-zinc-900/30 rounded-3xl border border-dashed border-zinc-800 p-20 text-center">
+              <h3 className="text-xl font-bold text-white mb-2">No active projects</h3>
+              <p className="text-zinc-500 mb-6">Create a project to start assigning tasks.</p>
+              <Link href="/dashboard/projects/new" className="text-blue-500 font-bold hover:underline">Go to Projects</Link>
             </div>
           ) : (
-            projects.map((project) => {
+            projects.map(project => {
               const tasks = getTasks(project.id);
+              if (tasks.length === 0) return null;
+
               return (
-                <div key={project.id} className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-sm">
-                  <div className="px-6 py-4 bg-zinc-50 dark:bg-zinc-800/50 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center">
-                    <h3 className="font-semibold text-zinc-900 dark:text-white">{project.name}</h3>
-                    <span className="text-xs text-zinc-500 font-medium">{tasks.length} Tasks</span>
-                  </div>
-                  <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                    {tasks.length === 0 ? (
-                      <div className="p-8 text-center text-zinc-500 text-sm">
-                        No tasks for this project
+                <div key={project.id} className="space-y-4">
+                  <div className="flex items-center justify-between px-2">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-zinc-900 rounded-lg flex items-center justify-center text-[10px] font-bold text-zinc-500 border border-zinc-800">
+                        {project.name.substring(0, 2).toUpperCase()}
                       </div>
-                    ) : (
-                      tasks.map((task) => (
-                        <div key={task.id} className="p-4 hover:bg-zinc-50 dark:hover:bg-zinc-800/30 transition-colors flex items-center justify-between gap-4 group">
-                          <div className="flex items-center gap-3">
-                            {task.status === 'done' ? (
-                              <CheckCircle2 className="w-5 h-5 text-green-500" />
-                            ) : task.status === 'in-progress' ? (
-                              <Clock className="w-5 h-5 text-blue-500" />
-                            ) : (
-                              <Circle className="w-5 h-5 text-zinc-300 dark:text-zinc-600" />
-                            )}
-                            <div>
-                              <p className={cn(
-                                "text-sm font-medium transition-colors",
-                                task.status === 'done' ? "text-zinc-400 line-through" : "text-zinc-900 dark:text-white"
-                              )}>
-                                {task.title}
-                              </p>
-                              <div className="flex items-center gap-2 mt-1">
-                                <span className={cn(
-                                  "text-[10px] px-1.5 py-0.5 rounded font-bold uppercase",
-                                  task.priority === 'high' ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" :
-                                  task.priority === 'medium' ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" :
-                                  "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
-                                )}>
-                                  {task.priority}
-                                </span>
-                                {task.due_date && (
-                                  <span className="text-[10px] text-zinc-500 flex items-center gap-1">
-                                    <Clock className="w-3 h-3" />
-                                    {new Date(task.due_date).toLocaleDateString()}
-                                  </span>
-                                )}
+                      <h3 className="font-bold text-white">{project.name}</h3>
+                      <span className="text-xs font-bold text-zinc-600 uppercase tracking-widest">{tasks.length}</span>
+                    </div>
+                    <Link href={`/dashboard/projects/${project.id}?tab=tasks`} className="text-[10px] font-bold text-zinc-500 hover:text-white uppercase tracking-[0.2em] transition-colors">
+                       Manage Project Tasks
+                    </Link>
+                  </div>
+                  
+                  <div className="bg-zinc-900/50 rounded-3xl border border-zinc-800/50 overflow-hidden premium-shadow divide-y divide-zinc-800/50">
+                    {tasks.map(task => {
+                      const comments = getTaskComments(task.id);
+                      return (
+                        <div key={task.id} className="p-5 hover:bg-zinc-900/80 transition-all group flex items-center gap-6">
+                           <div className={cn(
+                             "w-10 h-10 rounded-2xl flex items-center justify-center border transition-colors",
+                             task.status === 'done' ? "bg-emerald-600/10 border-emerald-600/20 text-emerald-500" : "bg-zinc-800 border-zinc-700 text-zinc-500 group-hover:border-blue-600/30 group-hover:text-blue-500"
+                           )}>
+                              <CheckSquare className="w-5 h-5" />
+                           </div>
+                           
+                           <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-3 mb-1">
+                                 <h4 className="font-bold text-white truncate">{task.title}</h4>
+                                 <div className={cn(
+                                   "w-1.5 h-1.5 rounded-full",
+                                   priorityColors[task.priority] === 'text-red-500' ? 'bg-red-500' :
+                                   priorityColors[task.priority] === 'text-amber-500' ? 'bg-amber-500' : 'bg-emerald-500'
+                                 )} />
                               </div>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-4">
-                            <div className="text-right">
-                              <p className="text-xs font-medium text-zinc-700 dark:text-zinc-300">{task.assigned_name || 'Unassigned'}</p>
-                              <p className="text-[10px] text-zinc-500">Assignee</p>
-                            </div>
-                            <div className="w-8 h-8 bg-zinc-100 dark:bg-zinc-800 rounded-full flex items-center justify-center text-[10px] font-bold text-zinc-500 border border-zinc-200 dark:border-zinc-700">
-                              {(task.assigned_name || '?')[0].toUpperCase()}
-                            </div>
-                          </div>
+                              <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-widest text-zinc-600">
+                                 <span className={cn("text-zinc-500", priorityColors[task.priority])}>{task.priority} Priority</span>
+                                 <span className="w-1 h-1 bg-zinc-800 rounded-full" />
+                                 <span>{task.workflow_stage || 'Backlog'}</span>
+                                 <span className="w-1 h-1 bg-zinc-800 rounded-full" />
+                                 <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {task.due_date ? new Date(task.due_date).toLocaleDateString() : 'No due date'}</span>
+                              </div>
+                           </div>
+
+                           <div className="flex items-center gap-6">
+                              <div className="flex items-center gap-4">
+                                 <div className="flex items-center gap-1.5 text-zinc-500 group-hover:text-zinc-400 transition-colors">
+                                    <MessageSquare className="w-4 h-4" />
+                                    <span className="text-xs font-bold">{comments.length}</span>
+                                 </div>
+                                 <div className="w-8 h-8 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center text-[10px] font-bold text-zinc-500" title={task.assigned_name || 'Unassigned'}>
+                                    {task.assigned_name ? task.assigned_name.substring(0, 1) : '?'}
+                                 </div>
+                              </div>
+                              <div className={cn(
+                                "px-3 py-1 rounded-lg border text-[10px] font-bold uppercase tracking-widest",
+                                statusColors[task.status]
+                              )}>
+                                 {task.status.replace('_', ' ')}
+                              </div>
+                              <button className="p-2 text-zinc-700 hover:text-white transition-colors">
+                                 <MoreVertical className="w-5 h-5" />
+                              </button>
+                           </div>
                         </div>
-                      ))
-                    )}
+                      );
+                    })}
                   </div>
                 </div>
               );

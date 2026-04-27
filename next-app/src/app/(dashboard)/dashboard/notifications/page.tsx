@@ -1,31 +1,79 @@
-import { Header } from '@/components/dashboard/header';
-import { Bell, Info } from 'lucide-react';
-
 export default function NotificationsPage() {
   return (
-    <>
-      <Header title="Notifications" />
-      <main className="p-8">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Notifications</h1>
-            <p className="text-zinc-500 text-sm mt-1">Stay updated with project changes and team activity</p>
-          </div>
-          <button className="text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400">
-            Mark all as read
-          </button>
-        </div>
+    <div className="flex h-screen">
+      <aside className="w-56 bg-zinc-900 p-4">
+        <div className="text-white font-semibold text-lg mb-6">PM Tool</div>
+        <nav className="space-y-1">
+          <a href="/dashboard" className="flex items-center gap-2 px-3 py-2 rounded-lg text-zinc-400 hover:text-white text-sm">Dashboard</a>
+          <a href="/dashboard/projects" className="flex items-center gap-2 px-3 py-2 rounded-lg text-zinc-400 hover:text-white text-sm">Projects</a>
+          <a href="/dashboard/tasks" className="flex items-center gap-2 px-3 py-2 rounded-lg text-zinc-400 hover:text-white text-sm">Tasks</a>
+          <a href="/dashboard/requirements" className="flex items-center gap-2 px-3 py-2 rounded-lg text-zinc-400 hover:text-white text-sm">Requirements</a>
+          <a href="/dashboard/change-requests" className="flex items-center gap-2 px-3 py-2 rounded-lg text-zinc-400 hover:text-white text-sm">Change Requests</a>
+          <a href="/dashboard/documents" className="flex items-center gap-2 px-3 py-2 rounded-lg text-zinc-400 hover:text-white text-sm">Documents</a>
+          <a href="/dashboard/notifications" className="flex items-center gap-2 px-3 py-2 rounded-lg bg-zinc-800 text-white text-sm">Notifications</a>
+          <a href="/dashboard/team" className="flex items-center gap-2 px-3 py-2 rounded-lg text-zinc-400 hover:text-white text-sm">Team</a>
+          <a href="/dashboard/settings" className="flex items-center gap-2 px-3 py-2 rounded-lg text-zinc-400 hover:text-white text-sm">Settings</a>
+        </nav>
+      </aside>
 
-        <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-sm">
-          <div className="p-20 text-center">
-            <div className="w-16 h-16 bg-zinc-100 dark:bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Bell className="w-8 h-8 text-zinc-400" />
-            </div>
-            <h3 className="text-lg font-medium text-zinc-900 dark:text-white">All caught up!</h3>
-            <p className="text-zinc-500 mt-1 max-w-xs mx-auto">You don't have any new notifications at the moment.</p>
+      <div className="flex-1 overflow-y-auto">
+        <header className="h-14 bg-white border-b border-zinc-200 flex items-center justify-between px-6">
+          <div className="text-sm text-zinc-600">Notifications</div>
+          <div className="flex items-center gap-3">
+            <span className="text-sm">Mike</span>
+            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-semibold">M</div>
           </div>
-        </div>
-      </main>
-    </>
+        </header>
+
+        <main className="p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-2xl font-semibold">Notifications</h1>
+            <button className="text-sm text-blue-600 hover:text-blue-700">Mark all as read</button>
+          </div>
+
+          <div className="bg-white rounded-lg border border-zinc-200">
+            <div className="p-8 text-center text-zinc-500">
+              <div className="text-4xl mb-4">🔔</div>
+              <p className="text-lg">No notifications</p>
+              <p className="text-sm">You're all caught up!</p>
+            </div>
+          </div>
+
+          <div className="mt-6 bg-white rounded-lg border border-zinc-200 p-6">
+            <h2 className="font-semibold mb-4">Notification Settings</h2>
+            <div className="space-y-3">
+              <label className="flex items-center gap-3 p-3 border border-zinc-200 rounded-lg hover:bg-zinc-50">
+                <input type="checkbox" defaultChecked className="w-4 h-4" />
+                <div>
+                  <div className="font-medium">Task Assignments</div>
+                  <div className="text-xs text-zinc-500">Get notified when tasks are assigned to you</div>
+                </div>
+              </label>
+              <label className="flex items-center gap-3 p-3 border border-zinc-200 rounded-lg hover:bg-zinc-50">
+                <input type="checkbox" defaultChecked className="w-4 h-4" />
+                <div>
+                  <div className="font-medium">Project Updates</div>
+                  <div className="text-xs text-zinc-500">Get notified about project status changes</div>
+                </div>
+              </label>
+              <label className="flex items-center gap-3 p-3 border border-zinc-200 rounded-lg hover:bg-zinc-50">
+                <input type="checkbox" className="w-4 h-4" />
+                <div>
+                  <div className="font-medium">Requirement Reviews</div>
+                  <div className="text-xs text-zinc-500">Get notified when requirements need your approval</div>
+                </div>
+              </label>
+              <label className="flex items-center gap-3 p-3 border border-zinc-200 rounded-lg hover:bg-zinc-50">
+                <input type="checkbox" className="w-4 h-4" />
+                <div>
+                  <div className="font-medium">Change Request Updates</div>
+                  <div className="text-xs text-zinc-500">Get notified about change request status changes</div>
+                </div>
+              </label>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
   );
 }
