@@ -1,16 +1,22 @@
 import { createProject } from "@/lib/projects";
 import { v4 as uuidv4 } from 'uuid';
-import { redirect } from "next/navigation";
+import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
-  const formData = await req.formData();
-  const name = formData.get('name') as string;
-  const clientId = formData.get('clientId') as string;
-  const description = formData.get('description') as string;
-  const team = formData.getAll('team') as string[];
-  
-  const id = `p_${uuidv4().slice(0, 12)}`;
-  createProject(id, name, description, clientId, team);
-  
-  return redirect('/dashboard');
+  try {
+    const body = await req.json();
+    const { name, clientId, description, team } = body;
+    
+    if (!name || !clientId) {
+      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    }
+
+    const id = `p_${uuidv4().slice(0, 12)}`;
+    createProject(id, name, description, clientId, team || []);
+    
+    return NextResponse.json({ id, message: "Project created successfully" });
+  } catch (error) {
+    // Fallback for form data if needed, but primarily JSON now
+    return NextResponse.json({ error: "Failed to create project" }, { status: 500 });
+  }
 }

@@ -1,99 +1,96 @@
 import { getProjects } from '@/lib/projects';
 import { getTasks } from '@/lib/tasks';
-import { getRequirements } from '@/lib/requirement';
-import { getChangeRequests } from '@/lib/changes';
-import { getAllUsers } from '@/lib/permissions';
+import { getChangeRequests, getAuditLogs } from '@/lib/changes';
+import { Header } from '@/components/dashboard/header';
+import { 
+  FolderKanban, 
+  CheckSquare, 
+  FileEdit, 
+  Activity,
+  ArrowUpRight,
+  TrendingUp,
+  Clock,
+  AlertCircle
+} from 'lucide-react';
+import Link from 'next/link';
+import { cn } from '@/lib/utils';
 
-const taskProgress = (tasks: any[]) => {
-  if (tasks.length === 0) return 0;
-  const completed = tasks.filter(t => t.status === 'done').length;
-  return Math.round((completed / tasks.length) * 100);
-};
-
-export function Dashboard() {
+export default function DashboardOverview() {
   const projects = getProjects();
+  const auditLogs = getAuditLogs() as any[];
   
-  const totalTasks = getProjects().reduce((sum, p) => sum + getTasks(p.id).length, 0);
-  const pendingCRs = getProjects().reduce((sum, p) => sum + getChangeRequests(p.id).filter(cr => cr.status === 'pending').length, 0);
-  const totalRequirements = getProjects().reduce((sum, p) => sum + getRequirements(p.id).length, 0);
+  // Aggregate stats
+  const totalProjects = projects.length;
+  const activeTasks = projects.reduce((acc, p) => {
+    const tasks = getTasks(p.id);
+    return acc + tasks.filter(t => t.status === 'todo' || t.status === 'in-progress').length;
+  }, 0);
+  const pendingCRs = projects.reduce((acc, p) => {
+    const crs = getChangeRequests(p.id);
+    return acc + crs.filter(cr => cr.status === 'pending').length;
+  }, 0);
   
+  const stats = [
+    { name: 'Total Projects', value: totalProjects, icon: FolderKanban, color: 'text-blue-600', bg: 'bg-blue-100 dark:bg-blue-900/30' },
+    { name: 'Active Tasks', value: activeTasks, icon: CheckSquare, color: 'text-green-600', bg: 'bg-green-100 dark:bg-green-900/30' },
+    { name: 'Pending CRs', value: pendingCRs, icon: FileEdit, color: 'text-purple-600', bg: 'bg-purple-100 dark:bg-purple-900/30' },
+    { name: 'System Activity', value: auditLogs.length, icon: Activity, color: 'text-amber-600', bg: 'bg-amber-100 dark:bg-amber-900/30' },
+  ];
+
   return (
-    <div className="flex h-screen">
-      <aside className="w-56 bg-zinc-900 p-4">
-        <div className="text-white font-semibold text-lg mb-6">PM Tool</div>
-        <nav className="space-y-1">
-          <a href="/dashboard" className="flex items-center gap-2 px-3 py-2 rounded-lg bg-zinc-800 text-white text-sm">Dashboard</a>
-          <a href="/dashboard/projects" className="flex items-center gap-2 px-3 py-2 rounded-lg text-zinc-400 hover:text-white text-sm">Projects</a>
-          <a href="/dashboard/tasks" className="flex items-center gap-2 px-3 py-2 rounded-lg text-zinc-400 hover:text-white text-sm">Tasks</a>
-          <a href="/dashboard/requirements" className="flex items-center gap-2 px-3 py-2 rounded-lg text-zinc-400 hover:text-white text-sm">Requirements</a>
-          <a href="/dashboard/change-requests" className="flex items-center gap-2 px-3 py-2 rounded-lg text-zinc-400 hover:text-white text-sm">Change Requests</a>
-          <a href="/dashboard/documents" className="flex items-center gap-2 px-3 py-2 rounded-lg text-zinc-400 hover:text-white text-sm">Documents</a>
-          <a href="/dashboard/notifications" className="flex items-center gap-2 px-3 py-2 rounded-lg text-zinc-400 hover:text-white text-sm">Notifications</a>
-          <a href="/dashboard/team" className="flex items-center gap-2 px-3 py-2 rounded-lg text-zinc-400 hover:text-white text-sm">Team</a>
-          <a href="/dashboard/settings" className="flex items-center gap-2 px-3 py-2 rounded-lg text-zinc-400 hover:text-white text-sm">Settings</a>
-        </nav>
-      </aside>
-      
-      <div className="flex-1 overflow-y-auto">
-        <header className="h-14 bg-white border-b border-zinc-200 flex items-center justify-between px-6">
-          <div className="text-sm text-zinc-600">Dashboard</div>
-          <div className="flex items-center gap-3">
-            <span className="text-sm">Mike</span>
-            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-semibold">M</div>
-          </div>
-        </header>
-        
-        <main className="p-6">
-          <div className="grid grid-cols-4 gap-6 mb-6">
-            <div className="bg-white rounded-lg border border-zinc-200 p-5">
-              <div className="text-sm text-zinc-600">Active Projects</div>
-              <div className="text-3xl font-bold mt-2 text-blue-600">{projects.filter(p => p.status === 'active').length}</div>
+    <>
+      <Header title="Overview" />
+      <main className="p-8 space-y-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {stats.map((stat) => (
+            <div key={stat.name} className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between mb-4">
+                <div className={cn("p-2 rounded-xl", stat.bg)}>
+                  <stat.icon className={cn("w-5 h-5", stat.color)} />
+                </div>
+                <TrendingUp className="w-4 h-4 text-zinc-400" />
+              </div>
+              <p className="text-2xl font-bold text-zinc-900 dark:text-white">{stat.value}</p>
+              <p className="text-sm text-zinc-500 mt-1">{stat.name}</p>
             </div>
-            <div className="bg-white rounded-lg border border-zinc-200 p-5">
-              <div className="text-sm text-zinc-600">Total Projects</div>
-              <div className="text-3xl font-bold mt-2">{projects.length}</div>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Projects Health */}
+          <div className="lg:col-span-2 space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-bold text-zinc-900 dark:text-white">Project Health</h2>
+              <Link href="/dashboard/projects" className="text-sm text-blue-600 hover:underline flex items-center gap-1 font-medium">
+                View all <ArrowUpRight className="w-3 h-3" />
+              </Link>
             </div>
-            <div className="bg-white rounded-lg border border-zinc-200 p-5">
-              <div className="text-sm text-zinc-600">Total Tasks</div>
-              <div className="text-3xl font-bold mt-2">{totalTasks}</div>
-            </div>
-            <div className="bg-white rounded-lg border border-zinc-200 p-5">
-              <div className="text-sm text-zinc-600">Pending CRs</div>
-              <div className="text-3xl font-bold mt-2 text-purple-600">{pendingCRs}</div>
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-lg border border-zinc-200">
-            <div className="px-5 py-4 border-b border-zinc-200 flex justify-between items-center">
-              <h2 className="font-semibold">Projects</h2>
-              <a href="/dashboard/projects/new" className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg">+ New Project</a>
-            </div>
-            <div className="divide-y divide-zinc-200">
+            <div className="grid gap-4">
               {projects.length === 0 ? (
-                <div className="p-12 text-center text-zinc-500">
-                  <p>No projects yet</p>
-                  <a href="/dashboard/projects/new" className="text-blue-600 mt-2 inline-block">Create your first project</a>
+                <div className="bg-white dark:bg-zinc-900 p-12 rounded-2xl border border-dashed border-zinc-300 dark:border-zinc-700 text-center">
+                   <p className="text-zinc-500">No active projects to monitor.</p>
                 </div>
               ) : (
-                projects.map(project => {
+                projects.slice(0, 3).map(project => {
                   const tasks = getTasks(project.id);
-                  const progress = taskProgress(tasks);
+                  const completed = tasks.filter(t => t.status === 'done').length;
+                  const progress = tasks.length > 0 ? Math.round((completed / tasks.length) * 100) : 0;
+                  
                   return (
-                    <div key={project.id} className="p-5 hover:bg-zinc-50 transition">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="font-medium text-zinc-900">{project.name}</h3>
-                          <p className="text-sm text-zinc-600 mt-1">{(project.description || '').slice(0, 100)}</p>
-                          <div className="flex items-center gap-3 mt-2">
-                            <span className="text-xs text-zinc-600">{project.client_name || 'No client'}</span>
-                            <span className="text-xs px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-700">{project.status}</span>
+                    <div key={project.id} className="bg-white dark:bg-zinc-900 p-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 flex items-center gap-4 group">
+                      <div className="w-12 h-12 bg-zinc-50 dark:bg-zinc-800 rounded-xl flex items-center justify-center font-bold text-zinc-400 group-hover:text-blue-500 transition-colors">
+                        {project.name.substring(0, 2).toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-sm font-semibold text-zinc-900 dark:text-white truncate">{project.name}</h4>
+                        <div className="flex items-center gap-3 mt-1">
+                          <div className="flex-1 h-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-blue-600 rounded-full transition-all duration-500" 
+                              style={{ width: `${progress}%` }} 
+                            />
                           </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-sm font-medium">{progress}%</div>
-                          <div className="w-32 h-2 bg-zinc-200 rounded-full mt-1">
-                            <div className="h-2 bg-blue-600 rounded-full" style={{width: `${progress}%`}} />
-                          </div>
+                          <span className="text-xs font-medium text-zinc-500">{progress}%</span>
                         </div>
                       </div>
                     </div>
@@ -102,10 +99,41 @@ export function Dashboard() {
               )}
             </div>
           </div>
-        </main>
-      </div>
-    </div>
+
+          {/* Recent Activity */}
+          <div className="space-y-6">
+            <h2 className="text-lg font-bold text-zinc-900 dark:text-white">Recent Activity</h2>
+            <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+              <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                {auditLogs.length === 0 ? (
+                  <div className="p-8 text-center text-zinc-500 text-sm">
+                    No recent activity.
+                  </div>
+                ) : (
+                  auditLogs.slice(0, 6).map((log) => (
+                    <div key={log.id} className="p-4 flex gap-3">
+                      <div className={cn(
+                        "mt-1 w-2 h-2 rounded-full shrink-0",
+                        log.action === 'CREATE' ? "bg-green-500" : 
+                        log.action === 'APPROVE' ? "bg-blue-500" : "bg-zinc-400"
+                      )} />
+                      <div>
+                        <p className="text-sm text-zinc-900 dark:text-white font-medium">
+                          {log.details}
+                        </p>
+                        <p className="text-xs text-zinc-500 mt-0.5 flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          {new Date(log.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </>
   );
 }
-
-export default Dashboard;
