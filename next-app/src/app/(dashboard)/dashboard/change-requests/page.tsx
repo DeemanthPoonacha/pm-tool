@@ -23,8 +23,13 @@ const statusColors: Record<string, string> = {
   rejected: 'bg-red-600/10 text-red-500 border-red-600/20',
 };
 
-export default function ChangeRequestsPage() {
-  const projects = getProjects();
+export default async function ChangeRequestsPage() {
+  const projects = await getProjects();
+
+  const projectsWithCRs = await Promise.all(projects.map(async (project) => {
+    const crs = await getChangeRequests(project.id);
+    return { ...project, crs };
+  }));
 
   return (
     <>
@@ -39,15 +44,15 @@ export default function ChangeRequestsPage() {
         </div>
 
         <div className="space-y-12">
-          {projects.length === 0 ? (
+          {projectsWithCRs.length === 0 ? (
             <div className="bg-zinc-900/30 rounded-3xl border border-dashed border-zinc-800 p-20 text-center">
               <h3 className="text-xl font-bold text-white mb-2">No active projects</h3>
               <p className="text-zinc-500 mb-6">Create a project to start managing change requests.</p>
               <Link href="/dashboard/projects" className="text-blue-500 font-bold hover:underline">Go to Projects</Link>
             </div>
           ) : (
-            projects.map(project => {
-              const crs = getChangeRequests(project.id);
+            projectsWithCRs.map(project => {
+              const crs = project.crs;
               if (crs.length === 0) return null;
 
               const pending = crs.filter(cr => cr.status === 'pending').length;
@@ -90,7 +95,7 @@ export default function ChangeRequestsPage() {
                                </div>
                                <p className="text-sm text-zinc-500 line-clamp-1 mb-2">
                                   {cr.description || 'No detailed description.'}
-                               </p>
+                                </p>
                                <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-widest text-zinc-600">
                                   <span className="flex items-center gap-1.5"><Zap className="w-3 h-3" /> Impact: {cr.impact || 'Medium'}</span>
                                   <span className="w-1 h-1 bg-zinc-800 rounded-full" />

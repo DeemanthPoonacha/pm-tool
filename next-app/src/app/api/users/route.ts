@@ -11,7 +11,7 @@ export async function POST(req: Request) {
     }
 
     const id = `u_${uuidv4().slice(0, 8)}`;
-    runExec(`
+    await runExec(`
       INSERT INTO users (id, full_name, email, role, created_at, updated_at)
       VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))
     `, [id, fullName, email, role]);

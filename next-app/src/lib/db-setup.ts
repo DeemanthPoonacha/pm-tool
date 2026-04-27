@@ -1,19 +1,38 @@
+import { createClient } from '@libsql/client';
 import Database from 'better-sqlite3';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
-import { eq, and } from 'drizzle-orm';
+import { drizzle } from 'drizzle-orm/libsql';
 import path from 'path';
 import fs from 'fs';
 
-const dbDir = path.join(process.cwd(), 'data');
-if (!fs.existsSync(dbDir)) {
-  fs.mkdirSync(dbDir, { recursive: true });
+const isProd = process.env.NODE_ENV === 'production';
+const useTurso = process.env.TURSO_CONNECTION_URL && process.env.TURSO_AUTH_TOKEN;
+
+let client: any;
+
+if (useTurso) {
+  client = createClient({
+    url: process.env.TURSO_CONNECTION_URL!,
+    authToken: process.env.TURSO_AUTH_TOKEN!,
+  });
+} else {
+  const dbDir = path.join(process.cwd(), 'data');
+  if (!fs.existsSync(dbDir)) {
+    fs.mkdirSync(dbDir, { recursive: true });
+  }
+  const sqliteFile = path.join(dbDir, 'pm-tool.db');
+  client = createClient({
+    url: `file:${sqliteFile}`,
+  });
 }
 
-const sqlite = new Database(path.join(dbDir, 'pm-tool.db'));
-sqlite.pragma('journal_mode = WAL');
+export const db = drizzle(client);
 
-function createTables() {
-  sqlite.exec(`
+export function getDb() {
+  return client;
+}
+
+export async function createTables() {
+  const schema = `
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
       full_name TEXT NOT NULL,
@@ -139,6 +158,7 @@ function createTables() {
       created_at TEXT DEFAULT (datetime('now')),
       FOREIGN KEY (user_id) REFERENCES users(id)
     );
+
     CREATE TABLE IF NOT EXISTS requirement_versions (
       id TEXT PRIMARY KEY,
       requirement_id TEXT NOT NULL,
@@ -190,20 +210,21 @@ function createTables() {
       FOREIGN KEY (change_request_id) REFERENCES change_requests(id) ON DELETE CASCADE,
       FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
     );
-  `);
+  `;
+  
+  // Libsql doesn't support multiple statements in one execute call easily,
+  // so we split by semicolon.
+  const statements = schema.split(';').map(s => s.trim()).filter(s => s.length > 0);
+  for (const statement of statements) {
+    await client.execute(statement);
+  }
 }
 
-createTables();
-
-export const db = drizzle(sqlite);
-
-export function getDb() {
-  return sqlite;
-}
-
-export function seedDatabase() {
-  const userCount: any = sqlite.prepare('SELECT COUNT(*) as count FROM users').get();
-  if (userCount.count === 0) {
+export async function seedDatabase() {
+  const userCountRes = await client.execute('SELECT COUNT(*) as count FROM users');
+  const userCount = userCountRes.rows[0].count as number;
+  
+  if (userCount === 0) {
     // 1. Seed Users
     const users = [
       ['u_admin', 'Admin User', 'admin@pmtool.com', 'admin'],
@@ -216,12 +237,13 @@ export function seedDatabase() {
       ['u_head1', 'David Wallace', 'david@pmtool.com', 'delivery_head'],
     ];
 
-    const userStmt = sqlite.prepare(`
-      INSERT INTO users (id, full_name, email, password_hash, role, created_at, updated_at)
-      VALUES (?, ?, ?, '$2b$10$rK.yZ3qH5L7mN8pQ9wX2YeDfGtBhJkLmNoPqRsTuVwXyZ1aBcDeFg', ?, datetime('now'), datetime('now'))
-    `);
-
-    users.forEach(u => userStmt.run(...u));
+    for (const u of users) {
+      await client.execute({
+        sql: `INSERT INTO users (id, full_name, email, password_hash, role, created_at, updated_at)
+              VALUES (?, ?, ?, '$2b$10$rK.yZ3qH5L7mN8pQ9wX2YeDfGtBhJkLmNoPqRsTuVwXyZ1aBcDeFg', ?, datetime('now'), datetime('now'))`,
+        args: u
+      });
+    }
 
     // 2. Seed Projects
     const projects = [
@@ -230,23 +252,25 @@ export function seedDatabase() {
       ['p_3', 'AI Integration', 'Adding predictive analytics to the core dashboard.', 'u_client1', 'active'],
     ];
 
-    const projStmt = sqlite.prepare(`
-      INSERT INTO projects (id, name, description, client_id, status, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, datetime('now'), datetime('now'))
-    `);
-
-    projects.forEach(p => projStmt.run(...p));
+    for (const p of projects) {
+      await client.execute({
+        sql: `INSERT INTO projects (id, name, description, client_id, status, created_at, updated_at)
+              VALUES (?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
+        args: p
+      });
+    }
 
     // 3. Seed Workflow Stages
     const stages = ['Requirement', 'Development', 'QA', 'UAT', 'Production'];
-    const stageStmt = sqlite.prepare(`
-      INSERT INTO project_workflow_stages (id, project_id, stage_name, stage_order, created_at)
-      VALUES (?, ?, ?, ?, datetime('now'))
-    `);
-
-    ['p_1', 'p_2', 'p_3'].forEach(pid => {
-      stages.forEach((s, idx) => stageStmt.run(`${pid}_s${idx}`, pid, s, idx));
-    });
+    for (const pid of ['p_1', 'p_2', 'p_3']) {
+      for (let i = 0; i < stages.length; i++) {
+        await client.execute({
+          sql: `INSERT INTO project_workflow_stages (id, project_id, stage_name, stage_order, created_at)
+                VALUES (?, ?, ?, ?, datetime('now'))`,
+          args: [`${pid}_s${i}`, pid, stages[i], i]
+        });
+      }
+    }
 
     // 4. Seed Requirements
     const reqs = [
@@ -255,12 +279,13 @@ export function seedDatabase() {
       ['r_3', 'AWS VPC Setup', 'Secure network architecture for the new cloud env.', 'p_2', 'u_ba1', 2, 'approved'],
     ];
 
-    const reqStmt = sqlite.prepare(`
-      INSERT INTO requirements (id, title, content, project_id, created_by, version, status, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
-    `);
-
-    reqs.forEach(r => reqStmt.run(...r));
+    for (const r of reqs) {
+      await client.execute({
+        sql: `INSERT INTO requirements (id, title, content, project_id, created_by, version, status, created_at, updated_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
+        args: r
+      });
+    }
 
     // 5. Seed Tasks
     const tasks = [
@@ -270,12 +295,13 @@ export function seedDatabase() {
       ['t_4', 'Configure Route53', 'p_2', 'u_dev2', 'u_pm1', 'in-progress', 'Development', 'medium'],
     ];
 
-    const taskStmt = sqlite.prepare(`
-      INSERT INTO tasks (id, title, project_id, assigned_to, created_by, status, workflow_stage, priority, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
-    `);
-
-    tasks.forEach(t => taskStmt.run(...t));
+    for (const t of tasks) {
+      await client.execute({
+        sql: `INSERT INTO tasks (id, title, project_id, assigned_to, created_by, status, workflow_stage, priority, created_at, updated_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
+        args: t
+      });
+    }
 
     // 6. Seed Change Requests
     const crs = [
@@ -283,12 +309,13 @@ export function seedDatabase() {
       ['cr_2', 'Multi-region deployment', 'Expand cloud migration to include EU-Central-1.', 'p_2', 'u_client1', 'approved', 'High'],
     ];
 
-    const crStmt = sqlite.prepare(`
-      INSERT INTO change_requests (id, title, description, project_id, requested_by, status, impact, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
-    `);
-
-    crs.forEach(c => crStmt.run(...c));
+    for (const c of crs) {
+      await client.execute({
+        sql: `INSERT INTO change_requests (id, title, description, project_id, requested_by, status, impact, created_at, updated_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
+        args: c
+      });
+    }
 
     // 7. Seed Audit Logs
     const audits = [
@@ -297,12 +324,13 @@ export function seedDatabase() {
       ['a_3', 'u_client1', 'CREATE', 'change_request', 'cr_1', 'Requested Dark Mode'],
     ];
 
-    const auditStmt = sqlite.prepare(`
-      INSERT INTO audit_logs (id, user_id, action, entity_type, entity_id, details, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
-    `);
-
-    audits.forEach(a => auditStmt.run(...a));
+    for (const a of audits) {
+      await client.execute({
+        sql: `INSERT INTO audit_logs (id, user_id, action, entity_type, entity_id, details, created_at)
+              VALUES (?, ?, ?, ?, ?, ?, datetime('now'))`,
+        args: a
+      });
+    }
 
     // 8. Seed Notifications
     const notifs = [
@@ -310,24 +338,27 @@ export function seedDatabase() {
       ['n_2', 'u_pm1', 'CR Pending Review', 'New Change Request: Add Dark Mode Support', 'cr', 0],
     ];
 
-    const notifStmt = sqlite.prepare(`
-      INSERT INTO notifications (id, user_id, title, message, type, is_read, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
-    `);
+    for (const n of notifs) {
+      await client.execute({
+        sql: `INSERT INTO notifications (id, user_id, title, message, type, is_read, created_at)
+              VALUES (?, ?, ?, ?, ?, ?, datetime('now'))`,
+        args: n
+      });
+    }
 
-    notifs.forEach(n => notifStmt.run(...n));
     // 9. Seed Project Documents
     const docs = [
       ['d_1', 'p_1', 'UI Style Guide', 'style_guide.pdf', '/docs/style_guide.pdf', 'pdf', 1024 * 1024, 'u_ba1', 'design'],
       ['d_2', 'p_2', 'VPC Architecture', 'vpc_v1.png', '/docs/vpc_v1.png', 'image', 500 * 1024, 'u_dev1', 'infrastructure'],
     ];
 
-    const docStmt = sqlite.prepare(`
-      INSERT INTO project_documents (id, project_id, title, file_name, file_path, file_type, file_size, uploaded_by, document_type, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
-    `);
-
-    docs.forEach(d => docStmt.run(...d));
+    for (const d of docs) {
+      await client.execute({
+        sql: `INSERT INTO project_documents (id, project_id, title, file_name, file_path, file_type, file_size, uploaded_by, document_type, created_at, updated_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
+        args: d
+      });
+    }
 
     // 10. Seed Change Request Tasks links
     const crTasks = [
@@ -335,13 +366,19 @@ export function seedDatabase() {
       ['cr_2', 't_4'],
     ];
 
-    const crtStmt = sqlite.prepare(`
-      INSERT INTO change_request_tasks (change_request_id, task_id)
-      VALUES (?, ?)
-    `);
-
-    crTasks.forEach(crt => crtStmt.run(...crt));
+    for (const crt of crTasks) {
+      await client.execute({
+        sql: `INSERT INTO change_request_tasks (change_request_id, task_id)
+              VALUES (?, ?)`,
+        args: crt
+      });
+    }
   }
 }
 
-seedDatabase();
+// In local dev, we still want to ensure tables and seed data exist.
+// Since we want this to be async and Next.js might call this multiple times,
+// we should handle it carefully.
+if (!isProd) {
+  createTables().then(() => seedDatabase()).catch(console.error);
+}

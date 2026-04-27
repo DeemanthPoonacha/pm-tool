@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@libsql/client": "^0.17.3",
     "@uploadthing/react": "^7.3.3",
     "better-auth": "^1.6.7",
     "better-sqlite3": "^12.9.0",

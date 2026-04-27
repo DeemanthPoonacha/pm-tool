@@ -1,4 +1,3 @@
-import { use } from 'react';
 import { getProject, getProjectTeam, getProjectWorkflowStages } from '@/lib/projects';
 import { getTasks } from '@/lib/tasks';
 import { getRequirements, getProjectDocuments } from '@/lib/requirement';
@@ -30,9 +29,9 @@ import {
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
-export default function ProjectDetailsPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
-  const project = getProject(id) as any;
+export default async function ProjectDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const project = (await getProject(id)) as any;
   
   if (!project) {
     return (
@@ -44,13 +43,13 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ id: s
     );
   }
 
-  const team = getProjectTeam(id);
-  const tasks = getTasks(id);
-  const requirements = getRequirements(id);
-  const crs = getChangeRequests(id);
-  const docs = getProjectDocuments(id);
-  const stages = getProjectWorkflowStages(id);
-  const users = getAllUsers();
+  const team = await getProjectTeam(id);
+  const tasks = await getTasks(id);
+  const requirements = await getRequirements(id);
+  const crs = await getChangeRequests(id);
+  const docs = await getProjectDocuments(id);
+  const stages = await getProjectWorkflowStages(id);
+  const users = await getAllUsers();
   const developers = users.filter(u => u.role === 'developer' || u.role === 'pm');
 
   const completedTasks = tasks.filter(t => t.status === 'done').length;

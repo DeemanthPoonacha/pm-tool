@@ -9,18 +9,18 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const project = getProject(id);
+  const project = await getProject(id);
   
   if (!project) {
     return NextResponse.json({ error: "Project not found" }, { status: 404 });
   }
 
-  const team = getProjectTeam(id);
-  const stages = getProjectWorkflowStages(id);
-  const tasks = getTasks(id);
-  const requirements = getRequirements(id);
-  const documents = getProjectDocuments(id);
-  const changes = getChangeRequests(id);
+  const team = await getProjectTeam(id);
+  const stages = await getProjectWorkflowStages(id);
+  const tasks = await getTasks(id);
+  const requirements = await getRequirements(id);
+  const documents = await getProjectDocuments(id);
+  const changes = await getChangeRequests(id);
 
   return NextResponse.json({
     ...project,

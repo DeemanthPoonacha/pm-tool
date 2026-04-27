@@ -11,7 +11,7 @@ export async function POST(req: Request) {
     }
 
     const id = `r_${uuidv4().slice(0, 12)}`;
-    createRequirement(id, title, content, projectId, createdBy);
+    await createRequirement(id, title, content, projectId, createdBy);
     
     return NextResponse.json({ id, message: "Requirement created successfully" });
   } catch (error) {
@@ -24,9 +24,9 @@ export async function PATCH(req: Request) {
     const { id, action, userId } = await req.json();
     
     if (action === 'approve') {
-      approveRequirement(id, userId);
+      await approveRequirement(id, userId);
     } else if (action === 'reject') {
-      rejectRequirement(id);
+      await rejectRequirement(id);
     } else {
       return NextResponse.json({ error: "Invalid action" }, { status: 400 });
     }

@@ -3,9 +3,10 @@ import Link from "next/link";
 import { Header } from "@/components/dashboard/header";
 import { ArrowLeft, Save } from "lucide-react";
 
-export default function NewProjectPage() {
-  const clients = getAllUsers().filter(u => u.role === 'client');
-  const allTeam = getAllUsers().filter(u => u.role !== 'admin');
+export default async function NewProjectPage() {
+  const users = await getAllUsers();
+  const clients = users.filter(u => u.role === 'client');
+  const allTeam = users.filter(u => u.role !== 'admin');
 
   return (
     <>

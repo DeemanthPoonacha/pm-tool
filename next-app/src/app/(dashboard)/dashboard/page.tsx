@@ -17,22 +17,21 @@ import {
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
-export default function DashboardOverview() {
-  const projects = getProjects();
-  const auditLogs = getAuditLogs() as any[];
-  const users = getAllUsers();
+export default async function DashboardOverview() {
+  const projects = await getProjects();
+  const auditLogs = (await getAuditLogs()) as any[];
+  const users = await getAllUsers();
   const clients = users.filter(u => u.role === 'client');
   
   // Aggregate stats
   const totalProjects = projects.length;
-  const activeTasks = projects.reduce((acc, p) => {
-    const tasks = getTasks(p.id);
-    return acc + tasks.filter(t => t.status === 'todo' || t.status === 'in-progress').length;
-  }, 0);
-  const pendingCRs = projects.reduce((acc, p) => {
-    const crs = getChangeRequests(p.id);
-    return acc + crs.filter(cr => cr.status === 'pending').length;
-  }, 0);
+  
+  // Fetch tasks for all projects to aggregate stats
+  const allProjectsTasks = await Promise.all(projects.map(p => getTasks(p.id)));
+  const activeTasks = allProjectsTasks.flat().filter(t => t.status === 'todo' || t.status === 'in-progress').length;
+  
+  const allProjectsCRs = await Promise.all(projects.map(p => getChangeRequests(p.id)));
+  const pendingCRs = allProjectsCRs.flat().filter(cr => cr.status === 'pending').length;
   
   const stats = [
     { name: 'Total Projects', value: totalProjects, icon: FolderKanban, color: 'text-blue-500', bg: 'bg-blue-600/10', border: 'border-blue-600/20' },
@@ -40,6 +39,14 @@ export default function DashboardOverview() {
     { name: 'Pending CRs', value: pendingCRs, icon: FileEdit, color: 'text-purple-500', bg: 'bg-purple-600/10', border: 'border-purple-600/20' },
     { name: 'System Activity', value: auditLogs.length, icon: Activity, color: 'text-emerald-500', bg: 'bg-emerald-600/10', border: 'border-emerald-600/20' },
   ];
+
+  // Prepare project display data with pre-fetched tasks
+  const projectDisplayData = await Promise.all(projects.slice(0, 4).map(async (project) => {
+    const tasks = await getTasks(project.id);
+    const completed = tasks.filter(t => t.status === 'done').length;
+    const progress = tasks.length > 0 ? Math.round((completed / tasks.length) * 100) : 0;
+    return { ...project, progress };
+  }));
 
   return (
     <>
@@ -95,10 +102,8 @@ export default function DashboardOverview() {
                    </div>
                 </div>
               ) : (
-                projects.slice(0, 4).map(project => {
-                  const tasks = getTasks(project.id);
-                  const completed = tasks.filter(t => t.status === 'done').length;
-                  const progress = tasks.length > 0 ? Math.round((completed / tasks.length) * 100) : 0;
+                projectDisplayData.map(project => {
+                  const progress = project.progress;
                   
                   return (
                     <Link 

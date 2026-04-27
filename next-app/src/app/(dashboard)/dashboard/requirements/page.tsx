@@ -23,8 +23,17 @@ const statusColors: Record<string, string> = {
   rejected: 'bg-red-600/10 text-red-500 border-red-600/20',
 };
 
-export default function RequirementsPage() {
-  const projects = getProjects();
+export default async function RequirementsPage() {
+  const projects = await getProjects();
+
+  const projectsWithRequirements = await Promise.all(projects.map(async (project) => {
+    const requirements = await getRequirements(project.id);
+    const requirementsWithVersions = await Promise.all(requirements.map(async (req) => {
+      const versions = await getRequirementVersions(req.id);
+      return { ...req, versions };
+    }));
+    return { ...project, requirements: requirementsWithVersions };
+  }));
 
   return (
     <>
@@ -39,15 +48,15 @@ export default function RequirementsPage() {
         </div>
 
         <div className="space-y-12">
-          {projects.length === 0 ? (
+          {projectsWithRequirements.length === 0 ? (
             <div className="bg-zinc-900/30 rounded-3xl border border-dashed border-zinc-800 p-20 text-center">
               <h3 className="text-xl font-bold text-white mb-2">No active projects</h3>
               <p className="text-zinc-500 mb-6">Create a project to start managing requirements.</p>
               <Link href="/dashboard/projects" className="text-blue-500 font-bold hover:underline">Go to Projects</Link>
             </div>
           ) : (
-            projects.map(project => {
-              const requirements = getRequirements(project.id);
+            projectsWithRequirements.map(project => {
+              const requirements = project.requirements;
               if (requirements.length === 0) return null;
 
               return (
@@ -64,7 +73,7 @@ export default function RequirementsPage() {
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {requirements.map(req => {
-                      const versions = getRequirementVersions(req.id);
+                      const versions = req.versions;
                       return (
                         <div key={req.id} className="bg-zinc-900/50 rounded-3xl border border-zinc-800/50 p-6 hover:border-blue-600/30 transition-all group premium-shadow flex flex-col">
                            <div className="flex justify-between items-start mb-4">

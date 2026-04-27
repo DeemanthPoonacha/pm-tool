@@ -29,20 +29,20 @@ export function can(userRole: string, permission: string): boolean {
   return perms ? perms.includes(permission) : false;
 }
 
-export function getUser(userId: string): User | undefined {
-  const row = runSingle('SELECT id, full_name, email, role, created_at FROM users WHERE id = ?', [userId]);
+export async function getUser(userId: string): Promise<User | undefined> {
+  const row = await runSingle('SELECT id, full_name, email, role, created_at FROM users WHERE id = ?', [userId]);
   if (!row) return undefined;
   return { id: row.id, full_name: row.full_name, email: row.email, role: row.role, created_at: row.created_at };
 }
 
-export function getUserByEmail(email: string): User | undefined {
-  const row = runSingle('SELECT id, full_name, email, password_hash, role, created_at FROM users WHERE email = ?', [email]);
+export async function getUserByEmail(email: string): Promise<User | undefined> {
+  const row = await runSingle('SELECT id, full_name, email, password_hash, role, created_at FROM users WHERE email = ?', [email]);
   if (!row) return undefined;
   return { id: row.id, full_name: row.full_name, email: row.email, role: row.role, created_at: row.created_at };
 }
 
-export function verifyLogin(email: string, password: string): { success: boolean; user: User | null; error?: string } {
-  const row = runSingle('SELECT id, full_name, email, password_hash, role FROM users WHERE email = ?', [email]);
+export async function verifyLogin(email: string, password: string): Promise<{ success: boolean; user: User | null; error?: string }> {
+  const row = await runSingle('SELECT id, full_name, email, password_hash, role FROM users WHERE email = ?', [email]);
   if (!row) return { success: false, user: null, error: 'Invalid email or password' };
 
   const result = require('crypto').scryptSync(password, row.password_hash.split(':')[1], 64).toString('hex');
@@ -54,25 +54,25 @@ export function verifyLogin(email: string, password: string): { success: boolean
   return { success: true, user: { id: row.id, full_name: row.full_name, email: row.email, role: row.role } };
 }
 
-export function getAllUsers(): User[] {
-  return runQuery('SELECT id, full_name, email, role, created_at FROM users ORDER BY full_name') as User[];
+export async function getAllUsers(): Promise<User[]> {
+  return (await runQuery('SELECT id, full_name, email, role, created_at FROM users ORDER BY full_name')) as User[];
 }
 
-export function createUser(id: string, full_name: string, email: string, passwordHash: string, role: string): boolean {
+export async function createUser(id: string, full_name: string, email: string, passwordHash: string, role: string): Promise<boolean> {
   try {
-    runExec('INSERT INTO users (id, full_name, email, password_hash, role, created_at, updated_at) VALUES (?, ?, ?, ?, ?, datetime(\'now\'), datetime(\'now\'))', [id, full_name, email, passwordHash, role]);
+    await runExec('INSERT INTO users (id, full_name, email, password_hash, role, created_at, updated_at) VALUES (?, ?, ?, ?, ?, datetime(\'now\'), datetime(\'now\'))', [id, full_name, email, passwordHash, role]);
     return true;
   } catch {
     return false;
   }
 }
 
-export function deleteUser(userId: string): boolean {
-  runExec('DELETE FROM users WHERE id = ?', [userId]);
+export async function deleteUser(userId: string): Promise<boolean> {
+  await runExec('DELETE FROM users WHERE id = ?', [userId]);
   return true;
 }
 
-export function updateUserRole(userId: string, role: string): boolean {
-  runExec('UPDATE users SET role = ?, updated_at = datetime(\'now\') WHERE id = ?', [role, userId]);
+export async function updateUserRole(userId: string, role: string): Promise<boolean> {
+  await runExec('UPDATE users SET role = ?, updated_at = datetime(\'now\') WHERE id = ?', [role, userId]);
   return true;
 }

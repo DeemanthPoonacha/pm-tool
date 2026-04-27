@@ -11,7 +11,7 @@ export async function POST(req: Request) {
     }
 
     const id = `cr_${uuidv4().slice(0, 12)}`;
-    createChangeRequest(id, title, description, projectId, requestedBy);
+    await createChangeRequest(id, title, description, projectId, requestedBy);
     
     return NextResponse.json({ id, message: "Change request raised successfully" });
   } catch (error) {
@@ -24,9 +24,9 @@ export async function PATCH(req: Request) {
     const { id, action, userId, impact, rejectionReason } = await req.json();
     
     if (action === 'approve') {
-      approveChangeRequest(id, userId, impact);
+      await approveChangeRequest(id, userId, impact);
     } else if (action === 'reject') {
-      rejectChangeRequest(id, rejectionReason);
+      await rejectChangeRequest(id, rejectionReason);
     } else {
       return NextResponse.json({ error: "Invalid action" }, { status: 400 });
     }

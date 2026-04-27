@@ -8,13 +8,14 @@ export async function GET(req: Request) {
   const projectId = searchParams.get('projectId');
   
   if (projectId) {
-    const tasks = getTasks(projectId);
+    const tasks = await getTasks(projectId);
     return NextResponse.json(tasks);
   }
 
   // If no project ID, maybe return all tasks for all projects
-  const projects = getProjects();
-  const allTasks = projects.flatMap(p => getTasks(p.id));
+  const projects = await getProjects();
+  const tasksArrays = await Promise.all(projects.map(p => getTasks(p.id)));
+  const allTasks = tasksArrays.flat();
   return NextResponse.json(allTasks);
 }
 
@@ -27,7 +28,7 @@ export async function POST(req: Request) {
     }
 
     const id = `t_${uuidv4().slice(0, 12)}`;
-    createTask(id, title, description, projectId, assignedTo, createdBy);
+    await createTask(id, title, description, projectId, assignedTo, createdBy);
     
     return NextResponse.json({ id, message: "Task created successfully" });
   } catch (error) {
@@ -39,10 +40,10 @@ export async function PATCH(req: Request) {
   try {
     const { id, status } = await req.json();
     // Simplified update for status
-    const task = (await import('@/lib/tasks')).getTask(id);
+    const task = await (await import('@/lib/tasks')).getTask(id);
     if (!task) return NextResponse.json({ error: "Task not found" }, { status: 404 });
     
-    updateTask(id, task.title, task.description || '', status, task.assigned_to, task.workflow_stage, task.priority, task.due_date);
+    await updateTask(id, task.title, task.description || '', status, task.assigned_to, task.workflow_stage, task.priority, task.due_date);
     return NextResponse.json({ message: "Task updated successfully" });
   } catch (error) {
     return NextResponse.json({ error: "Failed to update task" }, { status: 500 });

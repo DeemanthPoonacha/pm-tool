@@ -32,8 +32,8 @@ const roleLabels: Record<string, string> = {
   delivery_head: 'Delivery Head',
 };
 
-export default function TeamPage() {
-  const users = getAllUsers();
+export default async function TeamPage() {
+  const users = await getAllUsers();
 
   const roleStats = users.reduce((acc, user) => {
     acc[user.role] = (acc[user.role] || 0) + 1;

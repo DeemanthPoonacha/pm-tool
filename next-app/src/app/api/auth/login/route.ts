@@ -5,7 +5,7 @@ export async function POST(req: Request) {
   const email = formData.get('email') as string;
   const password = formData.get('password') as string;
   
-  const result = verifyLogin(email, password);
+  const result = await verifyLogin(email, password);
   
   if (!result.success) {
     return new Response('Invalid credentials', { status: 401 });

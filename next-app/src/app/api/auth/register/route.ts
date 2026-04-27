@@ -9,7 +9,7 @@ export async function POST(req: Request) {
   const password = formData.get('password') as string;
   
   const id = `u_${crypto.randomUUID().slice(0, 12)}`;
-  createUser(id, fullName, email, hashPassword(password), 'developer');
+  await createUser(id, fullName, email, hashPassword(password), 'developer');
   
   return redirect('/login');
 }

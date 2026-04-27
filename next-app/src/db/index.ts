@@ -75,17 +75,19 @@ export interface DbRow {
   [key: string]: any;
 }
 
-export function runQuery(sql: string, params: any[] = []) {
-  const db = getDb();
-  return db.prepare(sql).all(...params) as DbRow[];
+export async function runQuery(sql: string, params: any[] = []) {
+  const client = getDb();
+  const res = await client.execute({ sql, args: params });
+  return res.rows as unknown as DbRow[];
 }
 
-export function runSingle(sql: string, params: any[] = []) {
-  const db = getDb();
-  return db.prepare(sql).get(...params) as DbRow | undefined;
+export async function runSingle(sql: string, params: any[] = []) {
+  const client = getDb();
+  const res = await client.execute({ sql, args: params });
+  return (res.rows[0] as unknown as DbRow) || undefined;
 }
 
-export function runExec(sql: string, params: any[] = []) {
-  const db = getDb();
-  return db.prepare(sql).run(...params);
+export async function runExec(sql: string, params: any[] = []) {
+  const client = getDb();
+  return await client.execute({ sql, args: params });
 }

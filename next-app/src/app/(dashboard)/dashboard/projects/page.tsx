@@ -24,10 +24,27 @@ const taskProgress = (tasks: any[]) => {
   return Math.round((completed / tasks.length) * 100);
 };
 
-export default function ProjectsPage() {
-  const projects = getProjects();
-  const users = getAllUsers();
+export default async function ProjectsPage() {
+  const projects = await getProjects();
+  const users = await getAllUsers();
   const clients = users.filter(u => u.role === 'client');
+
+  const projectsWithData = await Promise.all(projects.map(async (project) => {
+    const tasks = await getTasks(project.id);
+    const requirements = await getRequirements(project.id);
+    const crs = await getChangeRequests(project.id);
+    const docs = await getProjectDocuments(project.id);
+    const team = await getProjectTeam(project.id);
+    return {
+      ...project,
+      tasks,
+      requirements,
+      crs,
+      docs,
+      team,
+      progress: taskProgress(tasks)
+    };
+  }));
 
   return (
     <>
@@ -42,7 +59,7 @@ export default function ProjectsPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {projects.length === 0 ? (
+          {projectsWithData.length === 0 ? (
             <div className="col-span-full bg-zinc-900/30 rounded-3xl border border-dashed border-zinc-800 p-20 text-center">
               <div className="w-20 h-20 bg-zinc-800/50 rounded-2xl flex items-center justify-center mx-auto mb-6">
                 <FolderKanban className="w-10 h-10 text-zinc-600" />
@@ -54,13 +71,8 @@ export default function ProjectsPage() {
               </div>
             </div>
           ) : (
-            projects.map(project => {
-              const tasks = getTasks(project.id);
-              const progress = taskProgress(tasks);
-              const requirements = getRequirements(project.id);
-              const crs = getChangeRequests(project.id);
-              const docs = getProjectDocuments(project.id);
-              const team = getProjectTeam(project.id);
+            projectsWithData.map(project => {
+              const { tasks, requirements, crs, docs, team, progress } = project;
               
               return (
                 <div key={project.id} className="bg-zinc-900/50 rounded-3xl border border-zinc-800/50 overflow-hidden hover:border-zinc-700/50 transition-all flex flex-col premium-shadow group">
@@ -130,7 +142,7 @@ export default function ProjectsPage() {
 
                   <div className="px-6 py-4 border-t border-zinc-800/50 flex items-center justify-between">
                     <div className="flex -space-x-2">
-                      {team.slice(0, 4).map((member, i) => (
+                      {team.slice(0, 4).map((member: any, i: number) => (
                         <div 
                           key={i} 
                           title={`${member.full_name} (${member.project_role})`}
