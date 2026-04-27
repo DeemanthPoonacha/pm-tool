@@ -1,113 +1,130 @@
 import { getProjects } from '@/lib/projects';
 import { getProjectDocuments } from '@/lib/requirement';
+import { Header } from '@/components/dashboard/header';
+import { 
+  Files, 
+  FileText, 
+  FolderSearch, 
+  Upload, 
+  Search,
+  Filter,
+  MoreVertical,
+  ArrowUpRight,
+  ChevronRight,
+  FileCode,
+  HardDrive
+} from 'lucide-react';
+import Link from 'next/link';
+import { cn } from '@/lib/utils';
 
 const docTypeColors: Record<string, string> = {
-  BRD: 'bg-purple-100 text-purple-700',
-  FRD: 'bg-indigo-100 text-indigo-700',
-  architecture: 'bg-blue-100 text-blue-700',
-  infrastructure: 'bg-cyan-100 text-cyan-700',
-  other: 'bg-zinc-100 text-zinc-700',
+  BRD: 'bg-purple-600/10 text-purple-500 border-purple-600/20',
+  FRD: 'bg-indigo-600/10 text-indigo-500 border-indigo-600/20',
+  architecture: 'bg-blue-600/10 text-blue-500 border-blue-600/20',
+  infrastructure: 'bg-cyan-600/10 text-cyan-500 border-cyan-600/20',
+  other: 'bg-zinc-800 text-zinc-500 border-zinc-700',
 };
 
 export default function DocumentsPage() {
   const projects = getProjects();
 
   return (
-    <div className="flex h-screen">
-      <aside className="w-56 bg-zinc-900 p-4">
-        <div className="text-white font-semibold text-lg mb-6">PM Tool</div>
-        <nav className="space-y-1">
-          <a href="/dashboard" className="flex items-center gap-2 px-3 py-2 rounded-lg text-zinc-400 hover:text-white text-sm">Dashboard</a>
-          <a href="/dashboard/projects" className="flex items-center gap-2 px-3 py-2 rounded-lg text-zinc-400 hover:text-white text-sm">Projects</a>
-          <a href="/dashboard/tasks" className="flex items-center gap-2 px-3 py-2 rounded-lg text-zinc-400 hover:text-white text-sm">Tasks</a>
-          <a href="/dashboard/requirements" className="flex items-center gap-2 px-3 py-2 rounded-lg text-zinc-400 hover:text-white text-sm">Requirements</a>
-          <a href="/dashboard/change-requests" className="flex items-center gap-2 px-3 py-2 rounded-lg text-zinc-400 hover:text-white text-sm">Change Requests</a>
-          <a href="/dashboard/documents" className="flex items-center gap-2 px-3 py-2 rounded-lg bg-zinc-800 text-white text-sm">Documents</a>
-          <a href="/dashboard/notifications" className="flex items-center gap-2 px-3 py-2 rounded-lg text-zinc-400 hover:text-white text-sm">Notifications</a>
-          <a href="/dashboard/team" className="flex items-center gap-2 px-3 py-2 rounded-lg text-zinc-400 hover:text-white text-sm">Team</a>
-          <a href="/dashboard/settings" className="flex items-center gap-2 px-3 py-2 rounded-lg text-zinc-400 hover:text-white text-sm">Settings</a>
-        </nav>
-      </aside>
-
-      <div className="flex-1 overflow-y-auto">
-        <header className="h-14 bg-white border-b border-zinc-200 flex items-center justify-between px-6">
-          <div className="text-sm text-zinc-600">Documents</div>
+    <>
+      <Header title="Project Documents" />
+      <main className="p-8 max-w-7xl mx-auto w-full space-y-8">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-bold text-white tracking-tight">Central Repository</h2>
+            <p className="text-zinc-500 mt-1">Manage and access all project artifacts, specifications, and architecture docs.</p>
+          </div>
           <div className="flex items-center gap-3">
-            <span className="text-sm">Mike</span>
-            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-semibold">M</div>
+             <button className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-blue-600/20">
+                <Upload className="w-4 h-4" />
+                Upload Artifact
+             </button>
           </div>
-        </header>
+        </div>
 
-        <main className="p-6">
-          <h1 className="text-2xl font-semibold mb-6">Documents</h1>
+        <div className="space-y-12">
+          {projects.length === 0 ? (
+            <div className="bg-zinc-900/30 rounded-3xl border border-dashed border-zinc-800 p-20 text-center">
+              <h3 className="text-xl font-bold text-white mb-2">No active projects</h3>
+              <p className="text-zinc-500 mb-6">Create a project to start managing documentation.</p>
+              <Link href="/dashboard/projects/new" className="text-blue-500 font-bold hover:underline">Go to Projects</Link>
+            </div>
+          ) : (
+            projects.map(project => {
+              const docs = getProjectDocuments(project.id);
+              if (docs.length === 0) return null;
 
-          <div className="space-y-6">
-            {projects.length === 0 ? (
-              <div className="bg-white rounded-lg border border-zinc-200 p-12 text-center">
-                <p className="text-zinc-500">No projects yet</p>
-                <a href="/dashboard/projects/new" className="text-blue-600 mt-2 inline-block">Create a project first</a>
-              </div>
-            ) : (
-              projects.map(project => {
-                const docs = getProjectDocuments(project.id);
-                const brd = docs.filter(d => d.document_type === 'BRD').length;
-                const frd = docs.filter(d => d.document_type === 'FRD').length;
-                const other = docs.filter(d => d.document_type !== 'BRD' && d.document_type !== 'FRD').length;
-                
-                return (
-                  <div key={project.id} className="bg-white rounded-lg border border-zinc-200 overflow-hidden">
-                    <div className="px-5 py-3 bg-zinc-50 border-b border-zinc-200">
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <h3 className="font-semibold">{project.name}</h3>
-                          <p className="text-xs text-zinc-500">{docs.length} documents</p>
-                        </div>
-                        <div className="flex gap-3 text-xs">
-                          <span className="text-purple-600">{brd} BRD</span>
-                          <span className="text-indigo-600">{frd} FRD</span>
-                          <span className="text-zinc-500">{other} other</span>
-                        </div>
+              const brdCount = docs.filter(d => d.document_type === 'BRD').length;
+              const frdCount = docs.filter(d => d.document_type === 'FRD').length;
+              
+              return (
+                <div key={project.id} className="space-y-4">
+                  <div className="flex items-center justify-between px-2">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-zinc-900 rounded-lg flex items-center justify-center text-[10px] font-bold text-zinc-500 border border-zinc-800">
+                        {project.name.substring(0, 2).toUpperCase()}
                       </div>
+                      <h3 className="font-bold text-white text-lg">{project.name}</h3>
                     </div>
-                    
-                    {docs.length === 0 ? (
-                      <div className="p-8 text-center text-zinc-500">
-                        No documents for this project
-                      </div>
-                    ) : (
-                      <div className="divide-y divide-zinc-100">
-                        {docs.map(doc => (
-                          <div key={doc.id} className="p-4">
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium">{doc.title}</span>
-                                  <span className={`text-xs px-2 py-0.5 rounded-full ${docTypeColors[doc.document_type] || 'bg-zinc-100 text-zinc-700'}`}>
-                                    {doc.document_type}
-                                  </span>
-                                  <span className="text-xs text-zinc-500">v{doc.version}</span>
-                                </div>
-                                <div className="text-sm text-zinc-500 mt-1">
-                                  {doc.file_name && <span>File: {doc.file_name}</span>}
-                                </div>
-                                <div className="flex items-center gap-4 mt-2 text-xs text-zinc-500">
-                                  <span>Uploaded by: {doc.uploaded_by_name || 'Unknown'}</span>
-                                  {doc.file_size && <span>Size: {(doc.file_size / 1024).toFixed(1)} KB</span>}
-                                  <span>Created: {new Date(doc.created_at).toLocaleDateString()}</span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                    <div className="flex items-center gap-4">
+                       <div className="hidden sm:flex items-center gap-4 text-[10px] font-bold uppercase tracking-widest text-zinc-600">
+                          <span>{brdCount} BRDs</span>
+                          <span className="w-1 h-1 bg-zinc-800 rounded-full" />
+                          <span>{frdCount} FRDs</span>
+                          <span className="w-1 h-1 bg-zinc-800 rounded-full" />
+                          <span>{docs.length - (brdCount + frdCount)} Others</span>
+                       </div>
+                       <Link href={`/dashboard/projects/${project.id}?tab=documents`} className="text-blue-500 hover:text-blue-400 transition-colors">
+                          <ArrowUpRight className="w-5 h-5" />
+                       </Link>
+                    </div>
                   </div>
-                );
-              })
-            )}
-          </div>
-        </main>
-      </div>
-    </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {docs.map(doc => (
+                      <div key={doc.id} className="bg-zinc-900/50 rounded-3xl border border-zinc-800/50 p-6 hover:border-zinc-700 transition-all group premium-shadow flex flex-col">
+                         <div className="flex justify-between items-start mb-4">
+                            <div className="w-12 h-12 bg-zinc-950 rounded-2xl flex items-center justify-center text-zinc-600 group-hover:text-blue-500 border border-zinc-800/50 transition-colors">
+                               <FileCode className="w-6 h-6" />
+                            </div>
+                            <div className={cn("px-2 py-0.5 rounded-lg text-[9px] font-bold uppercase tracking-widest border", docTypeColors[doc.document_type] || docTypeColors.other)}>
+                               {doc.document_type}
+                            </div>
+                         </div>
+                         
+                         <h4 className="font-bold text-white mb-2 line-clamp-1">{doc.title}</h4>
+                         <p className="text-xs text-zinc-500 mb-6 flex-1 italic truncate">
+                            {doc.file_name || 'No file linked'}
+                         </p>
+                         
+                         <div className="flex items-center justify-between pt-4 border-t border-zinc-800/50">
+                            <div className="flex flex-col">
+                               <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{doc.uploaded_by_name || 'System'}</span>
+                               <span className="text-[9px] font-bold text-zinc-600 mt-0.5">{new Date(doc.created_at).toLocaleDateString()}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                               {doc.file_size && (
+                                 <span className="text-[10px] font-bold text-zinc-600 bg-zinc-800/50 px-2 py-1 rounded-lg border border-zinc-800/50">
+                                    {(doc.file_size / 1024).toFixed(1)} KB
+                                 </span>
+                               )}
+                               <button className="p-2 text-zinc-600 hover:text-white transition-colors">
+                                  <MoreVertical className="w-4 h-4" />
+                                </button>
+                            </div>
+                         </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </main>
+    </>
   );
 }
