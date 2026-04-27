@@ -1,8 +1,6 @@
 'use client';
 
-import { use, useState } from 'react';
-import { getRequirement, getRequirementVersions } from '@/lib/requirement';
-import { getProject } from '@/lib/projects';
+import { use, useState, useEffect } from 'react';
 import { Header } from '@/components/dashboard/header';
 import { 
   FileText, 
@@ -34,9 +32,56 @@ const statusColors: Record<string, string> = {
 export default function RequirementDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
-  const requirement = getRequirement(id) as any;
-  
+  const [isLoading, setIsLoading] = useState(true);
+  const [isActionLoading, setIsActionLoading] = useState(false);
+  const [requirement, setRequirement] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const res = await fetch(`/api/requirements/${id}`);
+        if (res.ok) {
+          const data = await res.json();
+          setRequirement(data);
+        }
+      } catch (e) {
+        console.error('Failed to fetch requirement:', e);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchData();
+  }, [id]);
+
+  const handleAction = async (action: 'approve' | 'reject') => {
+    setIsActionLoading(true);
+    try {
+      const res = await fetch('/api/requirements', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, action, userId: 'u_pdm1' }),
+      });
+      if (res.ok) {
+        // Refresh local data
+        const freshRes = await fetch(`/api/requirements/${id}`);
+        const freshData = await freshRes.json();
+        setRequirement(freshData);
+      }
+    } catch (error) {
+      console.error(`Failed to ${action} requirement:`, error);
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col h-screen items-center justify-center bg-zinc-950 text-white">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
   if (!requirement) {
     return (
       <div className="flex flex-col h-screen items-center justify-center bg-zinc-950 text-white">
@@ -47,26 +92,8 @@ export default function RequirementDetailsPage({ params }: { params: Promise<{ i
     );
   }
 
-  const project = getProject(requirement.project_id) as any;
-  const versions = getRequirementVersions(id);
-
-  const handleAction = async (action: 'approve' | 'reject') => {
-    setIsLoading(true);
-    try {
-      const res = await fetch('/api/requirements', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: requirement.id, action, userId: 'u_pdm1' }),
-      });
-      if (res.ok) {
-        router.refresh();
-      }
-    } catch (error) {
-      console.error(`Failed to ${action} requirement:`, error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const project = requirement.project;
+  const versions = requirement.versions || [];
 
   return (
     <>
@@ -193,7 +220,7 @@ export default function RequirementDetailsPage({ params }: { params: Promise<{ i
                       {requirement.status === 'review' ? (
                         <>
                            <button 
-                             disabled={isLoading}
+                             disabled={isActionLoading}
                              onClick={() => handleAction('approve')}
                              className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 disabled:opacity-50"
                            >
@@ -201,7 +228,7 @@ export default function RequirementDetailsPage({ params }: { params: Promise<{ i
                               Approve Specification
                            </button>
                            <button 
-                             disabled={isLoading}
+                             disabled={isActionLoading}
                              onClick={() => handleAction('reject')}
                              className="w-full py-3 bg-red-600/10 hover:bg-red-600/20 text-red-500 border border-red-600/20 text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                            >

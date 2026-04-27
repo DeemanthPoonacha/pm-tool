@@ -1,8 +1,6 @@
 'use client';
 
-import { use, useState } from 'react';
-import { getChangeRequest, getChangeRequestTasks } from '@/lib/changes';
-import { getProject } from '@/lib/projects';
+import { use, useState, useEffect } from 'react';
 import { Header } from '@/components/dashboard/header';
 import { 
   FileEdit, 
@@ -34,10 +32,60 @@ const statusColors: Record<string, string> = {
 export default function ChangeRequestDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isActionLoading, setIsActionLoading] = useState(false);
+  const [cr, setCr] = useState<any>(null);
   
-  const cr = getChangeRequest(id);
-  
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const res = await fetch(`/api/change-requests/${id}`);
+        if (res.ok) {
+          const data = await res.json();
+          setCr(data);
+        }
+      } catch (e) {
+        console.error('Failed to fetch CR:', e);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchData();
+  }, [id]);
+
+  const handleAction = async (action: 'approve' | 'reject') => {
+    setIsActionLoading(true);
+    try {
+      await fetch('/api/change-requests', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          id, 
+          action, 
+          userId: 'u_admin', 
+          impact: action === 'approve' ? 'Medium' : null,
+          rejectionReason: action === 'reject' ? 'Not feasible within current timeline' : null
+        }),
+      });
+      // Refresh local data
+      const freshRes = await fetch(`/api/change-requests/${id}`);
+      const freshData = await freshRes.json();
+      setCr(freshData);
+    } catch (error) {
+      console.error(`Failed to ${action} CR:`, error);
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col h-screen items-center justify-center bg-zinc-950 text-white">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
   if (!cr) {
     return (
       <div className="flex flex-col h-screen items-center justify-center bg-zinc-950 text-white">
@@ -48,30 +96,8 @@ export default function ChangeRequestDetailsPage({ params }: { params: Promise<{
     );
   }
 
-  const project = getProject(cr.project_id) as any;
-  const linkedTasks = getChangeRequestTasks(id);
-
-  const handleAction = async (action: 'approve' | 'reject') => {
-    setIsLoading(true);
-    try {
-      await fetch('/api/change-requests', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          id: cr.id, 
-          action, 
-          userId: 'u_admin', 
-          impact: action === 'approve' ? 'Medium' : null,
-          rejectionReason: action === 'reject' ? 'Not feasible within current timeline' : null
-        }),
-      });
-      router.refresh();
-    } catch (error) {
-      console.error(`Failed to ${action} CR:`, error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const project = cr.project;
+  const linkedTasks = cr.tasks || [];
 
   return (
     <>
@@ -161,7 +187,7 @@ export default function ChangeRequestDetailsPage({ params }: { params: Promise<{
                     </div>
                   ) : (
                     <div className="divide-y divide-zinc-800/50">
-                       {linkedTasks.map((task) => (
+                       {linkedTasks.map((task: any) => (
                          <div key={task.id} className="p-5 flex items-center justify-between hover:bg-zinc-900/50 transition-colors group">
                             <div className="flex items-center gap-4">
                                <div className="w-10 h-10 rounded-xl bg-zinc-800 flex items-center justify-center text-zinc-500 border border-zinc-700">
@@ -226,7 +252,7 @@ export default function ChangeRequestDetailsPage({ params }: { params: Promise<{
                       {cr.status === 'pending' ? (
                         <>
                            <button 
-                             disabled={isLoading}
+                             disabled={isActionLoading}
                              onClick={() => handleAction('approve')}
                              className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-blue-600/20 flex items-center justify-center gap-2 disabled:opacity-50"
                            >
@@ -234,7 +260,7 @@ export default function ChangeRequestDetailsPage({ params }: { params: Promise<{
                               Approve Change
                            </button>
                            <button 
-                             disabled={isLoading}
+                             disabled={isActionLoading}
                              onClick={() => handleAction('reject')}
                              className="w-full py-3 bg-red-600/10 hover:bg-red-600/20 text-red-500 border border-red-600/20 text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                            >
@@ -251,7 +277,7 @@ export default function ChangeRequestDetailsPage({ params }: { params: Promise<{
                 </div>
              </div>
 
-             {/* Audit Trail Placeholder */}
+             {/* Audit History */}
              <div className="bg-zinc-900/50 rounded-3xl border border-zinc-800/50 p-6 premium-shadow">
                 <h4 className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest mb-4">Audit History</h4>
                 <div className="space-y-4">

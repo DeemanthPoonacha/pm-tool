@@ -1,8 +1,6 @@
 'use client';
 
-import { use, useState } from 'react';
-import { getTask, getTaskComments } from '@/lib/tasks';
-import { getProject } from '@/lib/projects';
+import { use, useState, useEffect } from 'react';
 import { Header } from '@/components/dashboard/header';
 import { 
   CheckSquare, 
@@ -16,7 +14,8 @@ import {
   Paperclip,
   Send,
   MoreVertical,
-  ShieldAlert
+  ShieldAlert,
+  Plus
 } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
@@ -38,11 +37,81 @@ const priorityColors: Record<string, string> = {
 export default function TaskDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isActionLoading, setIsActionLoading] = useState(false);
   const [commentContent, setCommentContent] = useState('');
+  const [task, setTask] = useState<any>(null);
   
-  const task = getTask(id);
-  
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const res = await fetch(`/api/tasks/${id}`);
+        if (res.ok) {
+          const data = await res.json();
+          setTask(data);
+        }
+      } catch (e) {
+        console.error('Failed to fetch task:', e);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchData();
+  }, [id]);
+
+  const handleUpdateStatus = async (status: string) => {
+    setIsActionLoading(true);
+    try {
+      const res = await fetch('/api/tasks', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, status }),
+      });
+      if (res.ok) {
+        const freshRes = await fetch(`/api/tasks/${id}`);
+        const freshData = await freshRes.json();
+        setTask(freshData);
+      }
+    } catch (error) {
+      console.error('Failed to update task status:', error);
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+
+  const handlePostComment = async () => {
+    if (!commentContent.trim()) return;
+    setIsActionLoading(true);
+    try {
+      await fetch('/api/tasks/comments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          taskId: id, 
+          userId: 'u_admin',
+          content: commentContent 
+        }),
+      });
+      setCommentContent('');
+      // Refresh comments
+      const freshRes = await fetch(`/api/tasks/${id}`);
+      const freshData = await freshRes.json();
+      setTask(freshData);
+    } catch (error) {
+      console.error('Failed to post comment:', error);
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col h-screen items-center justify-center bg-zinc-950 text-white">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
   if (!task) {
     return (
       <div className="flex flex-col h-screen items-center justify-center bg-zinc-950 text-white">
@@ -53,46 +122,8 @@ export default function TaskDetailsPage({ params }: { params: Promise<{ id: stri
     );
   }
 
-  const project = getProject(task.project_id) as any;
-  const comments = getTaskComments(id);
-
-  const handleUpdateStatus = async (status: string) => {
-    setIsLoading(true);
-    try {
-      await fetch('/api/tasks', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: task.id, status }),
-      });
-      router.refresh();
-    } catch (error) {
-      console.error('Failed to update task status:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handlePostComment = async () => {
-    if (!commentContent.trim()) return;
-    setIsLoading(true);
-    try {
-      await fetch('/api/tasks/comments', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          taskId: task.id, 
-          userId: 'u_admin', // Mocking as admin
-          content: commentContent 
-        }),
-      });
-      setCommentContent('');
-      router.refresh();
-    } catch (error) {
-      console.error('Failed to post comment:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const project = task.project;
+  const comments = task.comments || [];
 
   return (
     <>
@@ -153,7 +184,7 @@ export default function TaskDetailsPage({ params }: { params: Promise<{ id: stri
                     </div>
                   ) : (
                     <div className="space-y-8">
-                       {comments.map((comment) => (
+                       {comments.map((comment: any) => (
                          <div key={comment.id} className="flex gap-4">
                             <div className="w-10 h-10 rounded-xl bg-zinc-800 flex items-center justify-center text-white font-bold border border-zinc-700">
                                {comment.full_name.charAt(0)}
@@ -181,7 +212,7 @@ export default function TaskDetailsPage({ params }: { params: Promise<{ id: stri
                            className="w-full bg-zinc-950 border border-zinc-800 rounded-2xl p-4 pr-16 text-sm text-zinc-300 focus:ring-2 focus:ring-blue-600 outline-none min-h-[100px] transition-all"
                         />
                         <button 
-                          disabled={isLoading || !commentContent.trim()}
+                          disabled={isActionLoading || !commentContent.trim()}
                           onClick={handlePostComment}
                           className="absolute bottom-4 right-4 p-2 bg-blue-600 text-white rounded-xl hover:bg-blue-500 transition-all shadow-lg shadow-blue-600/20 disabled:opacity-50"
                         >
@@ -223,21 +254,21 @@ export default function TaskDetailsPage({ params }: { params: Promise<{ id: stri
                    <h4 className="text-[10px] font-bold text-zinc-600 uppercase tracking-[0.2em]">Quick Actions</h4>
                    <div className="grid grid-cols-1 gap-2">
                       <button 
-                        disabled={isLoading}
+                        disabled={isActionLoading}
                         onClick={() => handleUpdateStatus('in_progress')}
                         className="w-full py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold rounded-xl transition-all border border-zinc-700 disabled:opacity-50"
                       >
                          Mark In Progress
                       </button>
                       <button 
-                        disabled={isLoading}
+                        disabled={isActionLoading}
                         onClick={() => handleUpdateStatus('blocked')}
                         className="w-full py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold rounded-xl transition-all border border-zinc-700 disabled:opacity-50"
                       >
                          Mark as Blocked
                       </button>
                       <button 
-                        disabled={isLoading}
+                        disabled={isActionLoading}
                         onClick={() => handleUpdateStatus('done')}
                         className="w-full py-2.5 bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-500 text-xs font-bold rounded-xl transition-all border border-emerald-600/20 disabled:opacity-50"
                       >

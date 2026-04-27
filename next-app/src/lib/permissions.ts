@@ -30,15 +30,15 @@ export function can(userRole: string, permission: string): boolean {
 }
 
 export function getUser(userId: string): User | undefined {
-  const row = runSingle('SELECT id, full_name, email, role FROM users WHERE id = ?', [userId]);
+  const row = runSingle('SELECT id, full_name, email, role, created_at FROM users WHERE id = ?', [userId]);
   if (!row) return undefined;
-  return { id: row.id, full_name: row.full_name, email: row.email, role: row.role };
+  return { id: row.id, full_name: row.full_name, email: row.email, role: row.role, created_at: row.created_at };
 }
 
 export function getUserByEmail(email: string): User | undefined {
-  const row = runSingle('SELECT id, full_name, email, password_hash, role FROM users WHERE email = ?', [email]);
+  const row = runSingle('SELECT id, full_name, email, password_hash, role, created_at FROM users WHERE email = ?', [email]);
   if (!row) return undefined;
-  return { id: row.id, full_name: row.full_name, email: row.email, role: row.role };
+  return { id: row.id, full_name: row.full_name, email: row.email, role: row.role, created_at: row.created_at };
 }
 
 export function verifyLogin(email: string, password: string): { success: boolean; user: User | null; error?: string } {
@@ -55,7 +55,7 @@ export function verifyLogin(email: string, password: string): { success: boolean
 }
 
 export function getAllUsers(): User[] {
-  return runQuery('SELECT id, full_name, email, role FROM users ORDER BY full_name') as User[];
+  return runQuery('SELECT id, full_name, email, role, created_at FROM users ORDER BY full_name') as User[];
 }
 
 export function createUser(id: string, full_name: string, email: string, passwordHash: string, role: string): boolean {
